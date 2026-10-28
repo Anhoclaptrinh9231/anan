@@ -1,0 +1,8 @@
+/tmp/
+/tai-lieu-tham-khao/
+/*.zip
+.env
+.env.*
+!.env.example
+/hieu-sach-java/lib/*.jar
+/hieu-sach-java/docs/screenshots/

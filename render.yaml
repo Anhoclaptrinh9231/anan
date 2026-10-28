@@ -1,0 +1,29 @@
+# Deploy tu repo goc chua thu muc hieu-sach-java.
+# Chi su dung cac goi Free. Free Postgres het han sau 30 ngay (theo tai lieu Render).
+services:
+  - type: web
+    name: hieu-sach-tri-thuc
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: hieu-sach-java
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: BOOKSTORE_PUBLIC
+        value: "true"
+      - key: BOOKSTORE_BIND
+        value: 0.0.0.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: hieu-sach-db
+          property: connectionString
+databases:
+  - name: hieu-sach-db
+    plan: free
+    region: singapore
+    postgresMajorVersion: "16"
+    databaseName: hieusach
+    user: hieusach
+    ipAllowList: []
