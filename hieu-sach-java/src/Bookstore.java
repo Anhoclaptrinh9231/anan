@@ -139,6 +139,18 @@ public class Bookstore {
             try {
                 String result;
                 switch(path) {
+                    case "/api/products/delete" -> {
+                        String product=code(p,"code");
+                        if(query(c,"SELECT MaHH FROM HANGHOA WHERE MaHH=? FOR UPDATE",product).isEmpty())
+                            throw new IllegalArgumentException("Hàng hóa không tồn tại hoặc đã được xóa.");
+                        if(!query(c,"SELECT MaHH FROM BANHANG WHERE MaHH=? UNION ALL SELECT MaHH FROM NHAPHANG WHERE MaHH=?",product,product).isEmpty())
+                            throw new IllegalArgumentException("Không thể xóa hàng hóa đã có giao dịch nhập hoặc bán. Cần giữ lại để bảo toàn hóa đơn và báo cáo.");
+                        update(c,"DELETE FROM SACH_TB WHERE MaHHS=?",product);
+                        update(c,"DELETE FROM SACH WHERE MaHHS=?",product);
+                        update(c,"DELETE FROM DUNGCU WHERE MaHHD=?",product);
+                        update(c,"DELETE FROM HANGHOA WHERE MaHH=?",product);
+                        result=product;
+                    }
                     case "/api/products" -> {
                         String code=code(p,"code"),name=required(p,"name"),type=required(p,"type");
                         if(!Set.of("SACH","DUNGCU").contains(type)) throw new IllegalArgumentException("Loại hàng không hợp lệ.");
