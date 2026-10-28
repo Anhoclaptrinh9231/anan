@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#183e3b">
+  <meta name="description" content="Quản lý hiệu sách và văn phòng phẩm Tri Thức. Bài tập lớn Cơ sở dữ liệu, Java và JDBC.">
+  <title>Tri Thức · Quản lý hiệu sách</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23183e3b'/%3E%3Cpath d='M10 11h8l2 3 2-3h8v19h-8l-2 2-2-2h-8z' fill='%23e7c27d'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <a href="#dashboard" class="brand"><span class="brand-icon">Tt</span><span>Tri Thức<small>HIỆU SÁCH & VĂN PHÒNG PHẨM</small></span></a>
+      <div class="nav-caption">KHÔNG GIAN QUẢN LÝ</div>
+      <nav aria-label="Chức năng chính" id="nav"></nav>
+      <div class="sidebar-note"><span class="note-icon">✦</span><strong>Từ trang sách đến tri thức.</strong><p>Quản lý mỗi ngày, dành nhiều thời gian hơn cho bạn đọc.</p></div>
+      <div class="sidebar-bottom"><span class="status-dot"></span> Java + SQL <span class="version">BTL 2026</span></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar"><div class="breadcrumb">Tri Thức <span>/</span> <strong id="breadcrumb">Tổng quan</strong></div><div class="top-right"><span id="today"></span><span class="avatar" aria-label="Người quản lý">TT</span></div></header>
+      <div id="demo-banner" hidden>Bản demo công khai · Mọi người dùng chung dữ liệu. Vui lòng chỉ nhập dữ liệu minh họa.</div>
+      <main id="main" tabindex="-1" aria-live="polite"><div class="loading">Đang kết nối cơ sở dữ liệu…</div></main>
+      <footer class="page-footer"><span>Hiệu sách Tri Thức · Hà Đông, Hà Nội</span><span>Bài tập lớn Cơ sở dữ liệu · Dữ liệu minh họa</span></footer>
+    </div>
+  </div>
+  <dialog id="dialog" aria-labelledby="dialog-title"><div id="dialog-content"></div></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
