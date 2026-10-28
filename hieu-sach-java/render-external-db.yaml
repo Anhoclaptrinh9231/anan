@@ -1,0 +1,17 @@
+# Lua chon neu dung PostgreSQL ben ngoai (vi du Neon Free).
+# Khi tao Blueprint, chon file nay thay cho render.yaml o goc.
+services:
+  - type: web
+    name: hieu-sach-tri-thuc
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: hieu-sach-java
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: BOOKSTORE_PUBLIC
+        value: "true"
+      - key: DATABASE_URL
+        sync: false

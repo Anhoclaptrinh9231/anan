@@ -1,0 +1,10 @@
+build/
+data/
+test-output/
+tests/
+.git/
+.env
+.env.*
+docs/screenshots/
+*.log
+lib/*.jar

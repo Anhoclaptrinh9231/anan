@@ -1,0 +1,7 @@
+build/
+data/
+*.log
+test-output/
+.env
+.env.*
+!.env.example
