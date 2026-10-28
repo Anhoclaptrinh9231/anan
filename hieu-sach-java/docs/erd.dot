@@ -1,0 +1,42 @@
+// ERD khai niem theo quy tac trong BAO-CAO-THIET-KE.md.
+graph ER {
+ graph [rankdir=LR, bgcolor="white", pad="0.4", nodesep="0.3", ranksep="0.8", fontname="Arial", label="ERD - HIỆU SÁCH VÀ VĂN PHÒNG PHẨM TRI THỨC\n1:N ghi trên cạnh; ellipse đôi: đa trị; chữ nhật đôi: thực thể yếu", labelloc=t, fontsize=18];
+ node [shape=box, style=filled, fillcolor="#e6eee0", color="#53745d", fontname="Arial", fontsize=12, margin="0.14,0.10"];
+ CHU [label="CHỦ CỬA HÀNG"]; CH [label="CỬA HÀNG"]; NV [label="NHÂN VIÊN"]; KH [label="KHÁCH HÀNG"];
+ HH [label="HÀNG HÓA"]; SA [label="SÁCH"]; DC [label="DỤNG CỤ / VPP"];
+ NCC [label="NHÀ CUNG CẤP"]; CN [label="CHI NHÁNH NCC",peripheries=2];
+ HDB [label="HÓA ĐƠN BÁN"]; HDN [label="HÓA ĐƠN NHẬP"];
+ node [shape=diamond, fillcolor="#faefd8", color="#b69759", fontsize=10, width=0.7, height=0.5];
+ QL [label="Quản lý"]; LAM [label="Làm tại"]; MUA [label="Mua"]; LAPB [label="Lập bán"]; LAPN [label="Lập nhập"];
+ GOM [label="Gồm / Bán hàng"]; NHAP [label="Gồm / Nhập hàng"]; CO [label="Có",peripheries=2]; GIAO [label="Giao"];
+ node [shape=ellipse,fillcolor="#f7f8f3",color="#94a18c",fontsize=10];
+ machu [label=<<U>Tên chủ</U>>]; mach [label=<<U>Tên cửa hàng</U>>]; manv [label=<<U>Mã NV</U>>]; makh [label=<<U>Mã KH</U>>]; mahh [label=<<U>Mã HH</U>>]; macc [label=<<U>Mã CC</U>>]; tencn [label="Tên chi nhánh\n(khóa bộ phận)"];
+ mahdb [label=<<U>Mã HĐB</U>>]; mahdn [label=<<U>Mã HĐN</U>>];
+ ngayban [label="Ngày bán"]; ngaynhap [label="Ngày nhập"];
+ bhqty [label="Số lượng bán"]; bhgia [label="Đơn giá bán"]; nhqty [label="Số lượng nhập"]; nhgia [label="Đơn giá nhập"];
+ gia [label="Giá bán hiện tại"]; ton [label="Số lượng tồn"]; loaihh [label="Loại hàng"]; tenhh [label="Tên hàng"];
+ diachichu [label="Địa chỉ chủ"]; diachich [label="Địa chỉ cửa hàng"];
+ tennv [label="Tên NV"]; diachinv [label="Địa chỉ NV"]; sinhnv [label="Ngày sinh NV"]; gioinv [label="Giới tính NV"]; nhiemvu [label="Nhiệm vụ"];
+ tenkh [label="Tên KH"]; diachikh [label="Địa chỉ KH"]; sinhkh [label="Ngày sinh KH"]; gioikh [label="Giới tính KH"];
+ tenncc [label="Tên NCC"]; diachincc [label="Địa chỉ NCC"]; diachicn [label="Địa chỉ chi nhánh"];
+ tacgia [label="Tác giả"]; theloai [label="Thể loại"]; nhomdc [label="Nhóm dụng cụ"];
+ node [peripheries=2];
+ sdtchu [label="SĐT chủ"]; sdtch [label="SĐT cửa hàng"]; sdtnv [label="SĐT nhân viên"]; sdtkh [label="SĐT khách"]; sdtncc [label="SĐT nhà cung cấp"]; taiban [label="Tái bản"];
+ ISA [shape=triangle,peripheries=1,label="ISA",xlabel="Rời nhau, đầy đủ\n(kiểm tra ở Java)",fillcolor="#dce8f1",color="#728a9a",fontsize=10];
+ edge [fontname="Arial",fontsize=10,color="#748575"];
+ CHU -- QL [label="1"]; QL -- CH [label="N"]; CH -- LAM [label="1"]; LAM -- NV [label="N"];
+ KH -- MUA [label="1"]; MUA -- HDB [label="N"]; NV -- LAPB [label="1"]; LAPB -- HDB [label="N"];
+ HDB -- GOM [label="N"]; GOM -- HH [label="N"]; GOM -- bhqty; GOM -- bhgia;
+ NV -- LAPN [label="1"]; LAPN -- HDN [label="N"]; NCC -- CO [label="1"]; CO -- CN [label="N"]; CN -- GIAO [label="1"]; GIAO -- HDN [label="N"];
+ HDN -- NHAP [label="N"]; NHAP -- HH [label="N"]; NHAP -- nhqty; NHAP -- nhgia;
+ HH -- ISA; ISA -- SA; ISA -- DC;
+ CHU -- machu; CH -- mach; NV -- manv; KH -- makh; HH -- mahh; NCC -- macc; CN -- tencn;
+ HDB -- mahdb; HDN -- mahdn; HDB -- ngayban; HDN -- ngaynhap;
+ HH -- gia; HH -- ton; HH -- loaihh; HH -- tenhh;
+ CHU -- diachichu; CH -- diachich;
+ NV -- tennv; NV -- diachinv; NV -- sinhnv; NV -- gioinv; NV -- nhiemvu;
+ KH -- tenkh; KH -- diachikh; KH -- sinhkh; KH -- gioikh;
+ NCC -- tenncc; NCC -- diachincc; CN -- diachicn;
+ SA -- tacgia; SA -- theloai; SA -- taiban; DC -- nhomdc;
+ CHU -- sdtchu; CH -- sdtch; NV -- sdtnv; KH -- sdtkh; NCC -- sdtncc;
+}
