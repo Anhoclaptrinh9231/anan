@@ -13,3 +13,22 @@
 #products-table td:last-child,#search-result td:last-child{position:sticky;right:0;background:#fff}
 #products-table th:last-child,#search-result th:last-child{position:sticky;right:0;background:#f7f9f4}
 @media(max-width:780px){.diagram-grid{grid-template-columns:1fr}}
+
+/* Phông hệ thống có đủ dấu tiếng Việt, tránh tách dấu trong chữ "cuốn". */
+.brand,.welcome h2,.sidebar-note strong,.invoice-title,.search-intro h2{font-family:"Segoe UI",Arial,sans-serif;letter-spacing:0;font-kerning:normal}
+.welcome h2{font-weight:600;line-height:1.5}.welcome-copy{min-width:0}.sidebar nav{overflow-y:auto;min-height:0}.sidebar-note{padding-top:20px}.brand{padding-bottom:24px}
+.action-cell .button{margin:2px 3px 2px 0}.action-cell{white-space:nowrap}.status-cancelled{background:#fbece8;color:#a24735}.status-pending{background:#fff2da;color:#91641f}
+.catalog-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}.catalog-tabs .active{background:var(--green);color:white;border-color:var(--green)}
+.compact-filters{display:flex;align-items:end;gap:12px;flex-wrap:wrap}.compact-filters .field{min-width:145px;flex:1}.search-intro .compact-filters{margin-top:14px}.compact-filters .wide{flex:2;min-width:230px}
+.toolbar .field{min-width:170px}.check-filter{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}.check-filter input{width:auto}
+.report-section+.report-section{margin-top:25px;border-top:1px solid var(--line)}.report-section h3{padding:18px 22px}.report-totals{padding:15px 22px;background:#f4f6ee;display:flex;gap:24px;flex-wrap:wrap;font-size:12px}.report-totals strong{display:block;font-size:20px;color:var(--green)}
+.report-filters .field.branch{width:260px}.empty p{max-width:600px;margin:auto}.dialog-body .help{margin-top:15px}
+@media print{.catalog-tabs,.action-cell,.check-filter,#demo-banner{display:none!important}.report-totals{background:transparent}.report-section{break-inside:auto}.report-section h3{padding-left:0}.report-totals strong{color:#000}}
+
+.monthly-panel{margin-bottom:24px}.monthly-panel>.panel-header{align-items:flex-end;flex-wrap:wrap}.monthly-panel .compact-filters{gap:8px}.monthly-panel .compact-filters .field{min-width:100px}.monthly-panel input{width:105px}.monthly-panel select{max-width:225px}.monthly-panel .button{height:40px}
+.monthly-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;padding:0 22px 18px;color:var(--muted);font-size:11px}.monthly-summary strong{display:block;font-size:22px;color:var(--green)}.monthly-charts{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:0 22px 20px}.monthly-charts h3{margin-bottom:12px}.chart-caption{font-size:10px;color:var(--muted);margin-top:8px}.chart-bars{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;border-bottom:1px solid var(--line)}
+.chart-month{border:0;background:transparent;padding:0 2px 7px;min-width:0;color:var(--muted);font-size:10px;position:relative}.chart-month svg{height:170px;width:100%;display:block}.chart-month rect{fill:var(--green2)}.quantity-chart .chart-month rect{fill:#b68c47}.chart-month:hover,.chart-month.selected{background:#edf2e6;border-radius:6px}.chart-month:hover rect{opacity:.8}.chart-tooltip{visibility:hidden;position:absolute;bottom:85%;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:5px 8px;white-space:nowrap;border-radius:4px;z-index:3;font-size:11px}.chart-month:hover .chart-tooltip,.chart-month:focus-visible .chart-tooltip{visibility:visible}.chart-empty{font-size:11px;color:var(--muted);padding:10px 0}.month-detail{border-top:1px solid var(--line);padding:15px 22px;background:#f7f9f4;color:#526e55;font-size:12px;line-height:2}.monthly-table summary{padding:14px 22px}.monthly-table{border-top:1px solid var(--line)}
+@media(max-width:1050px){.monthly-charts{grid-template-columns:1fr}}@media(max-width:480px){.monthly-summary{grid-template-columns:1fr 1fr}.monthly-summary strong{font-size:19px}.monthly-charts{padding:0 15px 15px;gap:18px}.chart-month{padding-left:0;padding-right:0}.monthly-panel>.panel-header{padding:16px}.monthly-panel select{max-width:190px}}
+
+td.action-cell{position:sticky;right:0;background:#fff}.panel:has(.action-cell) th:last-child{position:sticky;right:0;background:#f7f9f4}
+@media(max-height:800px) and (min-width:781px){.sidebar-note{display:none}.sidebar nav{flex:1;overflow-y:auto}.sidebar-bottom{margin-top:18px}}
