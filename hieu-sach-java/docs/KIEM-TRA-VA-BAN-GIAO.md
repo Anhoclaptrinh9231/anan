@@ -1,3 +1,5 @@
+> Tài liệu lưu trữ của bản 20 bảng trước đây. Bản hiện hành đã thay bằng [mô hình 11 bảng](CAP-NHAT-MO-HINH-11-BANG.md) theo mô tả mới của nhóm. Không dùng số liệu/SQL bên dưới cho bản mới.
+
 # Kiểm tra bản bàn giao ngày 28/10/2026
 
 ## Đã kiểm tra

@@ -1,3 +1,5 @@
+> Tài liệu lưu trữ của bản 20 bảng trước đây. Bản hiện hành đã thay bằng [mô hình 11 bảng](CAP-NHAT-MO-HINH-11-BANG.md) theo mô tả mới của nhóm. Không dùng số liệu/SQL bên dưới cho bản mới.
+
 # Kịch bản 15 phút cho cả nhóm
 
 | Thời lượng | Người phụ trách | Nội dung |

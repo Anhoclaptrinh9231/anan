@@ -1,3 +1,5 @@
+> Tài liệu lưu trữ của bản 20 bảng trước đây. Bản hiện hành đã thay bằng [mô hình 11 bảng](CAP-NHAT-MO-HINH-11-BANG.md) theo mô tả mới của nhóm. Không dùng số liệu/SQL bên dưới cho bản mới.
+
 # Hệ CSDL quản lý hiệu sách và văn phòng phẩm Tri Thức
 
 Đây là bản thiết kế đi cùng mã nguồn đang chạy, để nhóm phát triển báo cáo BTL. Nhóm tự điền tên trường, lớp, giảng viên, thành viên và phân công; không ghi đây là bài mẫu trên mạng được chép nguyên.

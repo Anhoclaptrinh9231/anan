@@ -1,3 +1,5 @@
+> Tài liệu lưu trữ của bản 20 bảng trước đây. Bản hiện hành đã thay bằng [mô hình 11 bảng](CAP-NHAT-MO-HINH-11-BANG.md) theo mô tả mới của nhóm. Không dùng số liệu/SQL bên dưới cho bản mới.
+
 # Đối chiếu với nguồn bạn cung cấp
 
 Tài liệu lớp là căn cứ về kiến thức. 23 ảnh là **bài mẫu trên mạng**, không phải mô hình của nhóm đã được giảng viên duyệt. Thông báo mới của cô do bạn trích dẫn là căn cứ về sản phẩm phải nộp và lịch; không lấy lịch / tỷ trọng điểm năm 2014 trong giáo trình làm lịch hiện tại.
