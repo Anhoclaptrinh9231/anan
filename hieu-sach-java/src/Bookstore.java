@@ -46,6 +46,14 @@ public class Bookstore {
             c.setSchema(DATABASE_URL.isBlank()?"BOOKSTORE_V2":"bookstore_v2");
             try(Reader r=Files.newBufferedReader(ROOT.resolve("sql/schema.sql"))) {RunScript.execute(c,r);}
             s.execute("ALTER TABLE KHACH_HANG ADD COLUMN IF NOT EXISTS NgaySinh DATE");
+            boolean customerCascade=false;
+            try(ResultSet keys=c.getMetaData().getImportedKeys(null,c.getSchema(),DATABASE_URL.isBlank()?"HOA_DON_BAN":"hoa_don_ban")) {
+                while(keys.next())if("FK_HDB_KHACHHANG".equalsIgnoreCase(keys.getString("FK_NAME"))) customerCascade=keys.getShort("UPDATE_RULE")==DatabaseMetaData.importedKeyCascade&&keys.getShort("DELETE_RULE")==DatabaseMetaData.importedKeySetNull;
+            }
+            if(!customerCascade) {
+                s.execute("ALTER TABLE HOA_DON_BAN DROP CONSTRAINT FK_HDB_KHACHHANG");
+                s.execute("ALTER TABLE HOA_DON_BAN ADD CONSTRAINT FK_HDB_KHACHHANG FOREIGN KEY(MaKH) REFERENCES KHACH_HANG(MaKH) ON UPDATE CASCADE ON DELETE SET NULL");
+            }
             if(((Number)query(c,"SELECT COUNT(*) AS n FROM CHI_NHANH").get(0).get("n")).intValue()==0) seed(c);
         }
     }
@@ -111,7 +119,7 @@ public class Bookstore {
                 case "/api/health" -> Map.of("status","ok","application","tri-thuc-bookstore","model","11-tables-v2","database",DATABASE_URL.isBlank()?"H2":"PostgreSQL","publicDemo",PUBLIC_DEMO);
                 case "/api/dashboard" -> {
                     Map<String,Object> out=new LinkedHashMap<>();
-                    out.put("metrics",query(c,"SELECT (SELECT COUNT(*) FROM SACH) AS products,(SELECT COUNT(*) FROM KHACH_HANG) AS customers,(SELECT COUNT(*) FROM HOA_DON_BAN WHERE TrangThai='Hoàn tất') AS invoices,(SELECT COALESCE(SUM(d.SoLuongBan*d.DonGiaBanThucTe),0) FROM CT_HOA_DON_BAN d JOIN HOA_DON_BAN h ON h.MaHDB=d.MaHDB WHERE h.TrangThai='Hoàn tất') AS revenue,(SELECT COUNT(*) FROM TON_KHO t JOIN SACH s ON s.MaSach=t.MaSach WHERE t.SoLuongTon<=5 AND s.TrangThai='Đang kinh doanh') AS lowstock").get(0));
+                    out.put("metrics",query(c,"SELECT (SELECT COUNT(*) FROM SACH WHERE TrangThai='Đang kinh doanh') AS products,(SELECT COUNT(*) FROM KHACH_HANG) AS customers,(SELECT COUNT(*) FROM HOA_DON_BAN WHERE TrangThai='Hoàn tất') AS invoices,(SELECT COALESCE(SUM(d.SoLuongBan*d.DonGiaBanThucTe),0) FROM CT_HOA_DON_BAN d JOIN HOA_DON_BAN h ON h.MaHDB=d.MaHDB WHERE h.TrangThai='Hoàn tất') AS revenue,(SELECT COUNT(*) FROM TON_KHO t JOIN SACH s ON s.MaSach=t.MaSach WHERE t.SoLuongTon<=5 AND s.TrangThai='Đang kinh doanh') AS lowstock").get(0));
                     out.put("recent",sales(c));
                     out.put("popular",query(c,"SELECT s.MaSach AS code,s.TenSach AS name,SUM(d.SoLuongBan) AS quantity FROM SACH s JOIN CT_HOA_DON_BAN d ON d.MaSach=s.MaSach JOIN HOA_DON_BAN h ON h.MaHDB=d.MaHDB WHERE h.TrangThai='Hoàn tất' GROUP BY s.MaSach,s.TenSach ORDER BY quantity DESC,s.MaSach FETCH FIRST 5 ROWS ONLY"));
                     yield out;
@@ -125,7 +133,7 @@ public class Bookstore {
                 case "/api/employees" -> query(c,"SELECT n.MaNV AS code,n.HoTen AS name,n.NgaySinh AS birth,n.GioiTinh AS gender,n.SoDienThoai AS phone,n.ChucVu AS role,n.NgayVaoLam AS joined,n.TrangThai AS status,n.MaCN AS branchcode,c.TenCN AS branch FROM NHAN_VIEN n JOIN CHI_NHANH c ON c.MaCN=n.MaCN ORDER BY n.MaNV");
                 case "/api/suppliers" -> query(c,"SELECT MaNCC AS code,TenNCC AS name,DiaChi AS address,SoDienThoai AS phone,Email AS email FROM NHA_CUNG_CAP ORDER BY MaNCC");
                 case "/api/sales" -> sales(c);
-                case "/api/purchases" -> query(c,"SELECT p.MaPN AS code,p.NgayNhap AS date,p.TrangThai AS status,n.TenNCC AS supplier,c.TenCN AS branch,v.HoTen AS employee,SUM(d.SoLuongNhap*d.DonGiaNhap) AS amount FROM PHIEU_NHAP p JOIN NHA_CUNG_CAP n ON n.MaNCC=p.MaNCC JOIN CHI_NHANH c ON c.MaCN=p.MaCN JOIN NHAN_VIEN v ON v.MaNV=p.MaNV JOIN CT_PHIEU_NHAP d ON d.MaPN=p.MaPN GROUP BY p.MaPN,p.NgayNhap,p.TrangThai,n.TenNCC,c.TenCN,v.HoTen ORDER BY p.NgayNhap DESC,p.MaPN DESC");
+                case "/api/purchases" -> query(c,"SELECT p.MaPN AS code,p.NgayNhap AS date,p.TrangThai AS status,n.TenNCC AS supplier,c.TenCN AS branch,v.HoTen AS employee,SUM(d.SoLuongNhap*d.DonGiaNhap) AS amount FROM PHIEU_NHAP p JOIN NHA_CUNG_CAP n ON n.MaNCC=p.MaNCC JOIN CHI_NHANH c ON c.MaCN=p.MaCN JOIN NHAN_VIEN v ON v.MaNV=p.MaNV JOIN CT_PHIEU_NHAP d ON d.MaPN=p.MaPN WHERE p.TrangThai<>'Đã hủy' GROUP BY p.MaPN,p.NgayNhap,p.TrangThai,n.TenNCC,c.TenCN,v.HoTen ORDER BY p.NgayNhap DESC,p.MaPN DESC");
                 case "/api/invoice" -> invoice(c,required(p,"code"),val(p,"type","sale").equals("purchase"));
                 case "/api/reports" -> report(c,p);
                 default -> throw new IllegalArgumentException("Đường dẫn API không tồn tại.");
@@ -152,7 +160,8 @@ public class Bookstore {
         String sql="SELECT s.MaSach AS code,s.ISBN AS isbn,s.TenSach AS name,s.TacGia AS author,s.NhaXuatBan AS publisher,s.NamXuatBan AS \"year\",s.DonGiaBan AS price,s.TrangThai AS status,s.MaTL AS genrecode,l.TenTheLoai AS genre,";
         List<Object> args=new ArrayList<>();
         if(search) sql+="c.MaCN AS branchcode,c.TenCN AS branch,COALESCE(t.SoLuongTon,0) AS stock FROM SACH s JOIN THE_LOAI l ON l.MaTL=s.MaTL CROSS JOIN CHI_NHANH c LEFT JOIN TON_KHO t ON t.MaCN=c.MaCN AND t.MaSach=s.MaSach WHERE (?='' OR c.MaCN=?)";
-        else sql+="(SELECT COALESCE(SUM(t.SoLuongTon),0) FROM TON_KHO t WHERE t.MaSach=s.MaSach AND (?='' OR t.MaCN=?)) AS stock FROM SACH s JOIN THE_LOAI l ON l.MaTL=s.MaTL WHERE 1=1";
+        else sql+="(SELECT COALESCE(SUM(t.SoLuongTon),0) FROM TON_KHO t WHERE t.MaSach=s.MaSach AND (?='' OR t.MaCN=?)) AS stock FROM SACH s JOIN THE_LOAI l ON l.MaTL=s.MaTL WHERE s.TrangThai='Đang kinh doanh'";
+        if(search) sql+=" AND s.TrangThai='Đang kinh doanh'";
         args.add(branch);args.add(branch);
         sql+=" AND (LOWER(s.TenSach) LIKE ? ESCAPE '!' OR LOWER(s.TacGia) LIKE ? ESCAPE '!' OR LOWER(COALESCE(s.ISBN,'')) LIKE ? ESCAPE '!' OR LOWER(s.MaSach) LIKE ? ESCAPE '!') AND (?='' OR s.MaTL=?) AND (?='' OR s.TrangThai=?) AND s.DonGiaBan BETWEEN ? AND ? ORDER BY s.MaSach"+(search?",c.MaCN":"");
         args.addAll(List.of(term,term,term,term,val(p,"genre",""),val(p,"genre",""),val(p,"status",""),val(p,"status",""),money(val(p,"min","0")),money(val(p,"max","9999999999.99"))));
@@ -188,13 +197,24 @@ public class Bookstore {
                     }
                     case "/api/products/delete" -> {
                         id=sizedCode(p,"code",15);
-                        if(update(c,"UPDATE SACH SET TrangThai='Ngừng kinh doanh' WHERE MaSach=?",id)==0) throw new IllegalArgumentException("Sách không tồn tại.");
+                        if(query(c,"SELECT MaSach FROM SACH WHERE MaSach=? FOR UPDATE",id).isEmpty()) throw new IllegalArgumentException("Không tìm thấy sách.");
+                        if(query(c,"SELECT MaSach FROM CT_HOA_DON_BAN WHERE MaSach=? UNION ALL SELECT MaSach FROM CT_PHIEU_NHAP WHERE MaSach=?",id,id).isEmpty()) {
+                            update(c,"DELETE FROM TON_KHO WHERE MaSach=?",id);
+                            update(c,"DELETE FROM SACH WHERE MaSach=?",id);
+                        } else update(c,"UPDATE SACH SET TrangThai='Ngừng kinh doanh' WHERE MaSach=?",id);
+                    }
+                    case "/api/customers/delete" -> {
+                        id=sizedCode(p,"code",10);
+                        if(update(c,"DELETE FROM KHACH_HANG WHERE MaKH=?",id)==0)throw new IllegalArgumentException("Khách hàng không tồn tại hoặc đã được xóa.");
                     }
                     case "/api/customers" -> {
                         id=sizedCode(p,"code",10);
+                        String original=val(p,"original",id);
                         Object[] args={required(p,"name"),phone(p),nullable(p,"email"),nullable(p,"address"),date(val(p,"registered",LocalDate.now().toString())),nullable(p,"birth")==null?null:date(required(p,"birth")),id};
-                        if(editing(c,p,"KHACH_HANG","MaKH",id)) update(c,"UPDATE KHACH_HANG SET HoTen=?,SoDienThoai=?,Email=?,DiaChi=?,NgayDangKy=?,NgaySinh=? WHERE MaKH=?",args);
-                        else update(c,"INSERT INTO KHACH_HANG(HoTen,SoDienThoai,Email,DiaChi,NgayDangKy,NgaySinh,MaKH) VALUES(?,?,?,?,?,?,?)",args);
+                        if(editing(c,p,"KHACH_HANG","MaKH",original)) {
+                            Object[] edited=Arrays.copyOf(args,args.length+1);edited[args.length]=original;
+                            update(c,"UPDATE KHACH_HANG SET HoTen=?,SoDienThoai=?,Email=?,DiaChi=?,NgayDangKy=?,NgaySinh=?,MaKH=? WHERE MaKH=?",edited);
+                        } else update(c,"INSERT INTO KHACH_HANG(HoTen,SoDienThoai,Email,DiaChi,NgayDangKy,NgaySinh,MaKH) VALUES(?,?,?,?,?,?,?)",args);
                     }
                     case "/api/genres" -> {
                         id=sizedCode(p,"code",10);
@@ -288,7 +308,8 @@ public class Bookstore {
             if(action.equals("confirm")&&!b.get("status").equals("Đang kinh doanh")) throw new IllegalArgumentException("Sách "+book+" đã ngừng kinh doanh.");
             if(factor!=0) stock(c,branch,book,factor*((Number)line.get("quantity")).intValue());
         }
-        update(c,"UPDATE "+table+" SET TrangThai=? WHERE "+key+"=?",next,id);
+        if(purchase&&action.equals("cancel")) update(c,"DELETE FROM PHIEU_NHAP WHERE MaPN=?",id);
+        else update(c,"UPDATE "+table+" SET TrangThai=? WHERE "+key+"=?",next,id);
     }
 
     static void stock(Connection c,String branch,String book,int delta) throws Exception {
