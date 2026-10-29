@@ -1,65 +1,77 @@
--- SQL dung trong ung dung: JDBC thay cac dau ? bang gia tri nguoi dung nhap.
--- Muon chay truc tiep trong H2 Console: thay ? bang gia tri nhu ghi chu.
+-- SQL tương ứng giao diện Java, mô hình 11 bảng.
+-- Dấu ? là tham số PreparedStatement, không nối giá trị do người dùng nhập vào SQL.
 
--- FORM 1 - Nhap sach (thuc hien trong 1 transaction).
--- INSERT INTO HANGHOA(MaHH,Ten,Gia,SoLuong,Loai) VALUES(?,?,?,?, 'SACH');
--- INSERT INTO SACH(MaHHS,TacGia,TheLoai) VALUES(?,?,?);
--- INSERT INTO SACH_TB(MaHHS,TaiBan) VALUES(?,?);
+-- Form sách: thể loại và cập nhật giá/trạng thái.
+SELECT MaTL,TenTheLoai FROM THE_LOAI ORDER BY TenTheLoai;
+INSERT INTO SACH(MaSach,ISBN,TenSach,TacGia,NhaXuatBan,NamXuatBan,DonGiaBan,TrangThai,MaTL) VALUES(?,?,?,?,?,?,?,?,?);
+UPDATE SACH SET TenSach=?,DonGiaBan=?,MaTL=? WHERE MaSach=?;
+UPDATE SACH SET TrangThai='Ngừng kinh doanh' WHERE MaSach=?;
 
--- FORM 2 - Nhap khach hang (thuc hien trong 1 transaction).
--- INSERT INTO KHACHHANG(MaKH,Ten,DiaChi,GioiTinh,NgaySinh) VALUES(?,?,?,?,?);
--- INSERT INTO KHACHHANG_SDT(MaKH,SDT) VALUES(?,?);
+-- Hóa đơn / phiếu nhập: ngày giờ TIMESTAMP bắt buộc, khách lẻ có MaKH=NULL.
+INSERT INTO HOA_DON_BAN(MaHDB,NgayBan,TrangThai,PhuongThucThanhToan,MaNV,MaCN,MaKH) VALUES(?,?,?,?,?,?,?);
+INSERT INTO CT_HOA_DON_BAN VALUES(?,?,?,?);
+UPDATE TON_KHO SET SoLuongTon=SoLuongTon-? WHERE MaCN=? AND MaSach=? AND SoLuongTon>=?;
+INSERT INTO PHIEU_NHAP VALUES(?,?,?,?,?,?);
+INSERT INTO CT_PHIEU_NHAP VALUES(?,?,?,?);
+UPDATE TON_KHO SET SoLuongTon=SoLuongTon+? WHERE MaCN=? AND MaSach=?;
+-- Các bước của cùng chứng từ chạy trong một transaction và kiểm tra số dòng cập nhật.
+-- Xóa phiếu đã xác nhận: trừ đúng lượng nhập với điều kiện tồn không âm, rồi đổi trạng thái.
+UPDATE PHIEU_NHAP SET TrangThai='Đã hủy' WHERE MaPN=?;
 
--- TIM KIEM. 4 tham so dau: '%nhật ánh%', 2 tham so sau: '' hoac 'SACH'.
-SELECT h.MaHH,h.Ten,h.Gia,h.SoLuong,h.Loai,s.TacGia,s.TheLoai,d.Loai AS NhomDungCu
-FROM HANGHOA h LEFT JOIN SACH s ON s.MaHHS=h.MaHH LEFT JOIN DUNGCU d ON d.MaHHD=h.MaHH
-WHERE (LOWER(h.MaHH) LIKE ? ESCAPE '!' OR LOWER(h.Ten) LIKE ? ESCAPE '!'
-  OR LOWER(COALESCE(s.TacGia,'')) LIKE ? ESCAPE '!'
-  OR LOWER(COALESCE(s.TheLoai,d.Loai,'')) LIKE ? ESCAPE '!')
-  AND (?='' OR h.Loai=?)
-ORDER BY h.MaHH;
+-- Tìm kiếm kết hợp và xem tồn từng cửa hàng, kể cả tồn 0.
+SELECT s.MaSach,s.ISBN,s.TenSach,s.TacGia,l.TenTheLoai,s.DonGiaBan,c.TenCN,COALESCE(t.SoLuongTon,0) AS TonKhaDung
+FROM SACH s JOIN THE_LOAI l ON l.MaTL=s.MaTL CROSS JOIN CHI_NHANH c
+LEFT JOIN TON_KHO t ON t.MaCN=c.MaCN AND t.MaSach=s.MaSach
+WHERE (LOWER(s.TenSach) LIKE ? OR LOWER(s.TacGia) LIKE ? OR LOWER(s.ISBN) LIKE ?)
+AND (?='' OR c.MaCN=?) AND (?='' OR s.MaTL=?) AND s.DonGiaBan BETWEEN ? AND ?
+ORDER BY s.MaSach,c.MaCN;
 
--- BAO CAO 1 - Doanh thu. Tham so: DATE '2026-01-01', DATE '2026-12-31'.
-SELECT h.NgayBan AS NgayBan,COUNT(DISTINCT h.MaHDB) AS SoHoaDon,
-       SUM(b.SoLuong) AS SoLuongBan,SUM(b.SoLuong*b.DonGiaBan) AS DoanhThu
-FROM HOADONBAN h JOIN BANHANG b ON b.MaHDB=h.MaHDB
-WHERE h.NgayBan BETWEEN ? AND ?
-GROUP BY h.NgayBan ORDER BY h.NgayBan;
+-- Báo cáo hoặc biểu đồ: cùng câu SQL đang dùng trong Java.
+SELECT EXTRACT(MONTH
+FROM h.NgayBan) AS "month",COUNT(DISTINCT h.MaHDB) AS invoices,SUM(d.SoLuongBan) AS quantity,SUM(d.SoLuongBan*d.DonGiaBanThucTe) AS revenue
+FROM HOA_DON_BAN h
+JOIN CT_HOA_DON_BAN d ON d.MaHDB=h.MaHDB
+WHERE h.TrangThai='Hoàn tất' AND h.NgayBan>=? AND h.NgayBan<? AND (?='' OR h.MaCN=?)
+GROUP BY EXTRACT(MONTH
+FROM h.NgayBan)
+ORDER BY EXTRACT(MONTH
+FROM h.NgayBan);
 
--- BAO CAO 2 - Ton kho. Tham so: 20. Day la gia tri theo GIA BAN, khong phai gia von.
-SELECT MaHH,Ten,Loai,SoLuong,Gia,SoLuong*Gia AS GiaTriTheoGiaBan
-FROM HANGHOA WHERE SoLuong<=? ORDER BY SoLuong,MaHH;
+-- Báo cáo hoặc biểu đồ: cùng câu SQL đang dùng trong Java.
+WITH DT AS (SELECT h.MaCN,COUNT(DISTINCT h.MaHDB) AS SoHD,SUM(d.SoLuongBan) AS SLBan,SUM(d.SoLuongBan*d.DonGiaBanThucTe) AS DoanhThu
+FROM HOA_DON_BAN h
+JOIN CT_HOA_DON_BAN d ON d.MaHDB=h.MaHDB
+WHERE h.TrangThai='Hoàn tất' AND h.NgayBan>=? AND h.NgayBan<?
+GROUP BY h.MaCN), CP AS (SELECT p.MaCN,COUNT(DISTINCT p.MaPN) AS SoPN,SUM(d.SoLuongNhap) AS SLNhap,SUM(d.SoLuongNhap*d.DonGiaNhap) AS ChiPhi
+FROM PHIEU_NHAP p
+JOIN CT_PHIEU_NHAP d ON d.MaPN=p.MaPN
+WHERE p.TrangThai='Đã xác nhận' AND p.NgayNhap>=? AND p.NgayNhap<?
+GROUP BY p.MaCN) SELECT c.MaCN AS "Mã CN",c.TenCN AS "Chi nhánh",COALESCE(DT.SoHD,0) AS "Hóa đơn hoàn tất",COALESCE(DT.SLBan,0) AS "Số sách bán",COALESCE(DT.DoanhThu,0) AS "Doanh thu (đ)",COALESCE(CP.SoPN,0) AS "Phiếu đã xác nhận",COALESCE(CP.SLNhap,0) AS "Số sách nhập",COALESCE(CP.ChiPhi,0) AS "Chi phí nhập (đ)"
+FROM CHI_NHANH c
+LEFT JOIN DT ON DT.MaCN=c.MaCN
+LEFT JOIN CP ON CP.MaCN=c.MaCN
+WHERE (?='' OR c.MaCN=?)
+ORDER BY COALESCE(DT.DoanhThu,0) DESC,c.MaCN;
 
--- BAO CAO 3 - Cau 2 bai mau: khach mua nhieu nhat tai khu vuc trong khoang ngay.
--- Tham so: '%hà đông%', DATE '2026-01-01', DATE '2026-12-31'. Giu tat ca dong dong hang.
-WITH T AS (
-  SELECT k.MaKH,k.Ten,SUM(b.SoLuong) AS Tong
-  FROM KHACHHANG k JOIN HOADONBAN h ON h.MaKH=k.MaKH
-  JOIN BANHANG b ON b.MaHDB=h.MaHDB
-  WHERE LOWER(k.DiaChi) LIKE ? ESCAPE '!' AND h.NgayBan BETWEEN ? AND ?
-  GROUP BY k.MaKH,k.Ten
-)
-SELECT MaKH,Ten,Tong FROM T WHERE Tong=(SELECT MAX(Tong) FROM T) ORDER BY MaKH;
+-- Báo cáo hoặc biểu đồ: cùng câu SQL đang dùng trong Java.
+SELECT c.MaCN AS "Mã CN",c.TenCN AS "Chi nhánh",s.MaSach AS "Mã sách",s.ISBN AS "ISBN",s.TenSach AS "Tên sách",l.TenTheLoai AS "Thể loại",t.SoLuongTon AS "Tồn kho"
+FROM TON_KHO t
+JOIN CHI_NHANH c ON c.MaCN=t.MaCN
+JOIN SACH s ON s.MaSach=t.MaSach
+JOIN THE_LOAI l ON l.MaTL=s.MaTL
+WHERE t.SoLuongTon<=? AND s.TrangThai='Đang kinh doanh' AND (?='' OR c.MaCN=?)
+ORDER BY t.SoLuongTon,c.MaCN,s.MaSach;
 
--- BAO CAO 4 - Cau 7 bai mau: hang ban nhieu nhat tai khu vuc trong khoang ngay.
-WITH T AS (
-  SELECT g.MaHH,g.Ten,SUM(b.SoLuong) AS Tong
-  FROM HANGHOA g JOIN BANHANG b ON b.MaHH=g.MaHH
-  JOIN HOADONBAN h ON h.MaHDB=b.MaHDB JOIN KHACHHANG k ON k.MaKH=h.MaKH
-  WHERE LOWER(k.DiaChi) LIKE ? ESCAPE '!' AND h.NgayBan BETWEEN ? AND ?
-  GROUP BY g.MaHH,g.Ten
-)
-SELECT MaHH,Ten,Tong FROM T WHERE Tong=(SELECT MAX(Tong) FROM T) ORDER BY MaHH;
+-- Báo cáo hoặc biểu đồ: cùng câu SQL đang dùng trong Java.
+WITH T AS (SELECT s.MaSach,s.ISBN,s.TenSach,l.TenTheLoai,SUM(d.SoLuongBan) AS Tong,SUM(d.SoLuongBan*d.DonGiaBanThucTe) AS Tien
+FROM SACH s
+JOIN THE_LOAI l ON l.MaTL=s.MaTL
+JOIN CT_HOA_DON_BAN d ON d.MaSach=s.MaSach
+JOIN HOA_DON_BAN h ON h.MaHDB=d.MaHDB
+WHERE h.TrangThai='Hoàn tất' AND h.NgayBan>=? AND h.NgayBan<? AND (?='' OR h.MaCN=?)
+GROUP BY s.MaSach,s.ISBN,s.TenSach,l.TenTheLoai) SELECT MaSach AS "Mã sách",ISBN AS "ISBN",TenSach AS "Tên sách",TenTheLoai AS "Thể loại",Tong AS "Số lượng bán",Tien AS "Doanh thu (đ)"
+FROM T
+WHERE Tong>=(SELECT AVG(CAST(Tong AS DECIMAL(18,2)))
+FROM T)
+ORDER BY Tong DESC,Tien DESC,MaSach;
 
--- BAN HANG - ghi hoa don, chi tiet va tru kho trong 1 transaction.
--- INSERT INTO HOADONBAN VALUES(?,?,?,?);
--- SELECT Gia,Ten FROM HANGHOA WHERE MaHH=? FOR UPDATE;
--- UPDATE HANGHOA SET SoLuong=SoLuong-? WHERE MaHH=? AND SoLuong>=?;
--- INSERT INTO BANHANG VALUES(?,?,?,?);
--- Neu UPDATE khong sua duoc dong nao: ROLLBACK toan bo hoa don.
--- DonGiaBan luu gia tai luc ban, khong tinh lai bang gia hien tai.
-
--- NHAP HANG - gia nhap luu rieng, khong tu dong thay doi gia ban.
--- INSERT INTO HOADONNHAP VALUES(?,?,?,?,?);
--- INSERT INTO NHAPHANG VALUES(?,?,?,?);
--- UPDATE HANGHOA SET SoLuong=SoLuong+? WHERE MaHH=?;

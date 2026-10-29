@@ -1,108 +1,58 @@
--- Du lieu demo tu tao, muon mot so ten hang tu bai mau; khong chep nguyen ket qua bai mau.
--- Chi nap vao CSDL trong lan chay dau tien.
-INSERT INTO CHUCH VALUES ('Nguyễn Vũ Minh','Cầu Giấy - Hà Nội');
-INSERT INTO CHU_SDT VALUES ('Nguyễn Vũ Minh','0900000001'),('Nguyễn Vũ Minh','0900000002');
-INSERT INTO CUAHANG VALUES ('Hiệu sách Tri Thức','Hà Đông - Hà Nội','Nguyễn Vũ Minh');
-INSERT INTO CUAHANG_SDT VALUES ('Hiệu sách Tri Thức','02430000001');
-INSERT INTO NHANVIEN VALUES
-('NV001','Hoàng Văn Thanh','Hưng Yên','2000-03-12','Nam','Bán hàng'),
-('NV002','Ngô Phương Anh','Hải Dương','2001-06-10','Nữ','Bán hàng'),
-('NV003','Nguyễn Thu Hương','Hoàng Mai - Hà Nội','2000-04-08','Nữ','Bán hàng'),
-('NV004','Phạm Tiến Đạt','Hà Đông - Hà Nội','2001-01-20','Nam','Bán hàng'),
-('NV005','Vũ Thùy Linh','Hưng Yên','2000-02-14','Nữ','Bán hàng'),
-('NV006','Trần Nam Anh','Đống Đa - Hà Nội','1999-10-15','Nam','Nhập hàng'),
-('NV007','Đỗ Ngọc Trâm','Ba Vì - Hà Nội','2002-12-04','Nữ','Nhập hàng'),
-('NV008','Nguyễn Hoàng Long','Cầu Giấy - Hà Nội','2001-07-01','Nam','Nhập hàng'),
-('NV009','Lê Quỳnh Anh','Hà Đông - Hà Nội','2000-08-09','Nữ','Nhập hàng'),
-('NV010','Bùi Thế Đức','Hà Đông - Hà Nội','1999-09-12','Nam','Nhập hàng');
-INSERT INTO NHANVIEN_SDT VALUES ('NV001','0901000001'),('NV002','0901000002'),('NV002','0901000012'),('NV006','0901000006'),('NV009','0901000009');
-INSERT INTO LAM SELECT MaNV,'Hiệu sách Tri Thức' FROM NHANVIEN;
-INSERT INTO HANGHOA VALUES
-('HD001','Bút lông bảng HQ',12000,120,'DUNGCU'),
-('HD002','Keo khô FlexOffice FO-G03',11200,80,'DUNGCU'),
-('HD003','Hộp chì màu F13',32400,80,'DUNGCU'),
-('HD004','Compa Hồng Hà C-05',8600,105,'DUNGCU'),
-('HD005','Dao rọc giấy 156mm',12900,47,'DUNGCU'),
-('HD006','Tập vở Campus 12 cung hoàng đạo',7290,130,'DUNGCU'),
-('HD007','Thước thẳng 30 cm',9450,156,'DUNGCU'),
-('HD008','Thước thẳng 20 cm',3885,200,'DUNGCU'),
-('HD009','Bảng học sinh Thiên Long B-08',9460,120,'DUNGCU'),
-('HD010','Dao rọc giấy văn phòng',12650,59,'DUNGCU'),
-('HD011','Sổ caro 25x35 (M) SB-03',35640,20,'DUNGCU'),
-('HD012','Bút bi 0.5cm Thiên Long',2000,500,'DUNGCU'),
-('HD013','Sổ A4 KLONG',20000,200,'DUNGCU'),
-('HS001','Cho tôi xin một vé đi tuổi thơ',51000,35,'SACH'),
-('HS002','Nhà giả kim',59000,40,'SACH'),
-('HS003','Tạm biệt, em ổn',56000,12,'SACH'),
-('HS004','Đắc nhân tâm',65000,18,'SACH'),
-('HS005','Chúng ta rồi sẽ ổn thôi',86000,45,'SACH'),
-('HS006','Mỉm cười cho qua',60000,34,'SACH'),
-('HS007','Open the Window, Eyes Closed',58000,15,'SACH'),
-('HS008','Cà phê cùng Tony',54000,30,'SACH'),
-('HS009','Kỹ năng đọc hiểu văn bản Ngữ văn 12',44000,18,'SACH'),
-('HS010','Người cũ còn thương',58000,29,'SACH'),
-('HS011','Đừng bao giờ đi ăn một mình',59250,25,'SACH'),
-('HS012','Bài tập bổ trợ nâng cao tiếng Anh 10',51000,29,'SACH'),
-('HS013','Tôi thấy hoa vàng trên cỏ xanh',61500,50,'SACH'),
-('HS014','Rèn luyện kỹ năng giải toán Vật lý 10',45000,32,'SACH');
-INSERT INTO DUNGCU VALUES ('HD001','Bút'),('HD002','Keo'),('HD003','Chì màu'),('HD004','Compa'),('HD005','Dao rọc giấy'),('HD006','Vở'),('HD007','Thước'),('HD008','Thước'),('HD009','Bảng học sinh'),('HD010','Dao rọc giấy'),('HD011','Sổ'),('HD012','Bút'),('HD013','Sổ');
-INSERT INTO SACH VALUES
-('HS001','Nguyễn Nhật Ánh','Tiểu thuyết'),('HS002','Paulo Coelho','Văn học nước ngoài'),
-('HS003','Tờ Pi','Tản văn'),('HS004','Dale Carnegie','Kỹ năng sống'),
-('HS005','Gào; Minh Nhật','Tản văn'),('HS006','Iris Cao; Hamlet Trương','Tản văn'),
-('HS007','Nguyễn Ngọc Thuần','Sách tiếng Anh'),('HS008','Tony Buổi Sáng','Kỹ năng sống'),
-('HS009','Nguyễn Kim Phong','Giáo dục'),('HS010','Nguyễn Ngọc Thạch','Tản văn'),
-('HS011','Keith Ferrazzi','Kỹ năng sống'),('HS012','Nguyễn Thị Chi','Giáo dục'),
-('HS013','Nguyễn Nhật Ánh','Tiểu thuyết'),('HS014','Mai Chánh Trí','Giáo dục');
-INSERT INTO SACH_TB VALUES ('HS001','Lần thứ ba'),('HS001','Lần thứ tư'),('HS002','Lần thứ nhất'),('HS004','Lần thứ nhất'),('HS012','Lần thứ ba');
-INSERT INTO KHACHHANG VALUES
-('KH001','Nguyễn Thúy Hằng','Hà Đông - Hà Nội','Nữ','2005-04-12'),
-('KH002','Khúc Xuân Duy','Cầu Giấy - Hà Nội','Nam','2004-06-23'),
-('KH003','Lê Hương Giang','Bắc Ninh','Nữ','1998-01-10'),
-('KH004','Lê Thị Dương','Hải Dương','Nữ','1986-12-07'),
-('KH005','Lê Xuân Nhật','Hà Đông - Hà Nội','Nam','1991-02-18'),
-('KH006','Bùi Thế Đức','Hoàn Kiếm - Hà Nội','Nam','2003-08-14'),
-('KH007','Vũ Thị Nga','Hà Đông - Hà Nội','Nữ','2002-03-19'),
-('KH008','Chu An Dương','Bắc Ninh','Nam','2004-05-20');
-INSERT INTO KHACHHANG_SDT VALUES ('KH001','0902000001'),('KH002','0902000002'),('KH002','0902000012'),('KH003','0902000003'),('KH004','0902000004'),('KH005','0902000005'),('KH006','0902000006'),('KH007','0902000007'),('KH008','0902000008');
-INSERT INTO NHACUNGCAP VALUES
-('CD001','Văn phòng phẩm Phú Thịnh','Văn Giang - Hưng Yên'),
-('CD002','Văn phòng phẩm Minh Nam','Thanh Xuân - Hà Nội'),
-('CD009','Sách và thiết bị Cửu Long','Định Công - Hà Nội'),
-('CS007','Nhà xuất bản Trẻ','Hà Đông - Hà Nội'),
-('CS010','Nhà xuất bản Kim Đồng','Hai Bà Trưng - Hà Nội');
-INSERT INTO NHACUNGCAP_SDT VALUES ('CD001','0903000001'),('CD002','0903000002'),('CD009','0903000009'),('CS007','0903000007'),('CS010','0903000010');
-INSERT INTO CHINHANH VALUES
-('Chi nhánh Hưng Yên','CD001','Kim Động - Hưng Yên'),
-('Chi nhánh Hải Dương','CD001','Kim Thành - Hải Dương'),
-('Chi nhánh Hải Phòng','CD002','Tam Bạc - Hải Phòng'),
-('Chi nhánh Hà Nội','CD009','Hà Đông - Hà Nội'),
-('Chi nhánh số 1','CS007','Hà Đông - Hà Nội'),
-('Chi nhánh số 2','CS007','Hoàn Kiếm - Hà Nội'),
-('Chi nhánh số 1','CS010','Hai Bà Trưng - Hà Nội');
-INSERT INTO HOADONNHAP VALUES
-('HDN001','2026-10-20','NV006','CD001','Chi nhánh Hưng Yên'),
-('HDN002','2026-10-21','NV009','CS007','Chi nhánh số 1'),
-('HDN003','2026-10-23','NV008','CD009','Chi nhánh Hà Nội');
-INSERT INTO NHAPHANG VALUES
-('HDN001','HD001',30,8000),('HDN001','HD011',20,25000),
-('HDN002','HS001',10,35000),('HDN002','HS013',10,42000),
-('HDN003','HS002',10,40000),('HDN003','HS004',10,45000);
-INSERT INTO HOADONBAN VALUES
-('HDB001','2026-10-22','NV001','KH001'),('HDB002','2026-10-23','NV002','KH007'),
-('HDB003','2026-10-24','NV003','KH003'),('HDB004','2026-10-25','NV004','KH005'),
-('HDB005','2026-10-26','NV001','KH007'),('HDB006','2026-10-27','NV005','KH002'),
-('HDB007','2026-10-28','NV002','KH004'),('HDB008','2026-10-28','NV001','KH007');
-INSERT INTO BANHANG VALUES
-('HDB001','HS001',2,51000),('HDB001','HD012',5,2000),
-('HDB002','HD011',12,35640),('HDB002','HS002',2,59000),
-('HDB003','HS004',1,65000),('HDB003','HD006',4,7290),
-('HDB004','HS013',3,61500),('HDB004','HD001',2,12000),
-('HDB005','HD011',8,35640),('HDB005','HS001',1,51000),
-('HDB006','HS008',3,54000),('HDB006','HD013',2,20000),
-('HDB007','HS003',1,56000),('HDB007','HD003',1,32400),
-('HDB008','HD011',5,35640),('HDB008','HS004',2,65000);
--- Ton hien tai = ton dau ky + nhap - ban.
-UPDATE HANGHOA h SET SoLuong=SoLuong
-    + COALESCE((SELECT SUM(n.SoLuong) FROM NHAPHANG n WHERE n.MaHH=h.MaHH),0)
-    - COALESCE((SELECT SUM(b.SoLuong) FROM BANHANG b WHERE b.MaHH=h.MaHH),0);
+-- Dữ liệu minh họa theo mô tả nhóm; thông tin liên hệ chỉ dùng để demo.
+-- 1. Dữ liệu CHI_NHANH
+INSERT INTO CHI_NHANH VALUES ('CN01', 'Hiệu sách Cơ sở Hà Đông', 'Km10 Nguyễn Trãi, Hà Đông, Hà Nội', '0900001111', 'Hoạt động');
+INSERT INTO CHI_NHANH VALUES ('CN02', 'Hiệu sách Cơ sở Cầu Giấy', '122 Hoàng Quốc Việt, Cầu Giấy, Hà Nội', '0900002222', 'Hoạt động');
+
+-- 2. Dữ liệu NHAN_VIEN
+INSERT INTO NHAN_VIEN VALUES ('NV01', 'Nguyễn Việt Anh', '1999-05-12', 'Nam', '0900002233', 'Quản trị viên', '2024-01-10', 'Đang làm việc', 'CN01');
+INSERT INTO NHAN_VIEN VALUES ('NV02', 'Đặng Đình Quang', '2003-08-20', 'Nam', '0900003344', 'Nhân viên bán hàng', '2025-02-15', 'Đang làm việc', 'CN01');
+INSERT INTO NHAN_VIEN VALUES ('NV03', 'Đoàn Mạnh Sơn', '2002-11-05', 'Nam', '0900004455', 'Nhân viên nhập hàng', '2025-03-01', 'Đang làm việc', 'CN01');
+INSERT INTO NHAN_VIEN VALUES ('NV04', 'Mạc Đình Toàn', '2003-04-18', 'Nam', '0900005566', 'Nhân viên bán hàng', '2025-06-01', 'Đang làm việc', 'CN02');
+
+-- 3. Dữ liệu KHACH_HANG
+INSERT INTO KHACH_HANG(MaKH,HoTen,SoDienThoai,Email,DiaChi,NgayDangKy) VALUES ('KH01', 'Phạm Trường An', '0900005678', 'demo@example.com', 'Thanh Xuân, Hà Nội', '2026-01-15');
+INSERT INTO KHACH_HANG(MaKH,HoTen,SoDienThoai,Email,DiaChi,NgayDangKy) VALUES ('KH02', 'Trần Thị Thu Hà', '0900004321', 'demo@example.com', 'Hoàng Mai, Hà Nội', '2026-03-20');
+
+-- 4. Dữ liệu THE_LOAI
+INSERT INTO THE_LOAI VALUES ('TL01', 'Công nghệ thông tin', 'Sách giáo trình lập trình, cơ sở dữ liệu, mạng máy tính');
+INSERT INTO THE_LOAI VALUES ('TL02', 'Ngoại ngữ', 'Sách luyện thi tiếng Nhật JLPT, tiếng Anh IELTS/TOEIC');
+INSERT INTO THE_LOAI VALUES ('TL03', 'Văn học', 'Tiểu thuyết, truyện ngắn trong nước và quốc tế');
+
+-- 5. Dữ liệu SACH
+INSERT INTO SACH VALUES ('S001', '978-604-80-1001', 'Bài giảng Cơ sở dữ liệu', 'Nguyễn Quỳnh Chi', 'NXB Thông tin và Truyền thông', 2024, 125000, 'Đang kinh doanh', 'TL01');
+INSERT INTO SACH VALUES ('S002', '978-604-80-1002', 'Cấu trúc dữ liệu và Giải thuật C++', 'Lê Minh Hoàng', 'NXB Đại học Quốc gia', 2025, 155000, 'Đang kinh doanh', 'TL01');
+INSERT INTO SACH VALUES ('S003', '978-604-80-1003', 'Minna no Nihongo Sơ cấp II (N4)', '3A Corporation', 'NXB Giáo dục Việt Nam', 2025, 110000, 'Đang kinh doanh', 'TL02');
+INSERT INTO SACH VALUES ('S004', '978-604-80-1004', 'Mắt Biếc', 'Nguyễn Nhật Ánh', 'NXB Trẻ', 2023, 95000, 'Đang kinh doanh', 'TL03');
+
+-- 6. Dữ liệu NHA_CUNG_CAP
+INSERT INTO NHA_CUNG_CAP VALUES ('NCC01', 'Công ty Phát hành sách FAHASA', '60 Nguyễn Huệ, TP.HCM', '0900005796', 'demo@example.com');
+INSERT INTO NHA_CUNG_CAP VALUES ('NCC02', 'Công ty Sách và Thiết bị Giáo dục Hà Nội', '45 Lý Thường Kiệt, Hà Nội', '0900005432', 'demo@example.com');
+
+-- 7. Dữ liệu PHIEU_NHAP
+INSERT INTO PHIEU_NHAP VALUES ('PN20261001', '2026-10-01 09:00:00', 'Đã xác nhận', 'NCC02', 'NV03', 'CN01');
+INSERT INTO PHIEU_NHAP VALUES ('PN20261002', '2026-10-05 14:30:00', 'Đã xác nhận', 'NCC01', 'NV01', 'CN02');
+
+-- 8. Dữ liệu CT_PHIEU_NHAP
+INSERT INTO CT_PHIEU_NHAP VALUES ('PN20261001', 'S001', 50, 90000);
+INSERT INTO CT_PHIEU_NHAP VALUES ('PN20261001', 'S002', 10, 115000);
+INSERT INTO CT_PHIEU_NHAP VALUES ('PN20261001', 'S003', 8, 80000);
+INSERT INTO CT_PHIEU_NHAP VALUES ('PN20261002', 'S001', 30, 90000);
+INSERT INTO CT_PHIEU_NHAP VALUES ('PN20261002', 'S004', 25, 68000);
+
+-- 9. Dữ liệu HOA_DON_BAN
+INSERT INTO HOA_DON_BAN VALUES ('HDB20261001', '2026-10-20 10:15:00', 'Hoàn tất', 'Chuyển khoản', 'NV02', 'CN01', 'KH01');
+INSERT INTO HOA_DON_BAN VALUES ('HDB20261002', '2026-10-22 16:40:00', 'Hoàn tất', 'Tiền mặt', 'NV02', 'CN01', NULL); -- Khách lẻ
+INSERT INTO HOA_DON_BAN VALUES ('HDB20261003', '2026-10-25 11:00:00', 'Hoàn tất', 'Thẻ', 'NV04', 'CN02', 'KH02');
+
+-- 10. Dữ liệu CT_HOA_DON_BAN
+INSERT INTO CT_HOA_DON_BAN VALUES ('HDB20261001', 'S001', 3, 125000);
+INSERT INTO CT_HOA_DON_BAN VALUES ('HDB20261001', 'S002', 6, 155000);
+INSERT INTO CT_HOA_DON_BAN VALUES ('HDB20261002', 'S003', 5, 110000);
+INSERT INTO CT_HOA_DON_BAN VALUES ('HDB20261003', 'S004', 4, 95000);
+
+-- 11. Dữ liệu TON_KHO (Sau khi cộng nhập và trừ bán)
+INSERT INTO TON_KHO VALUES ('CN01', 'S001', 47);
+INSERT INTO TON_KHO VALUES ('CN01', 'S002', 4);  -- Sắp hết hàng (< 5 cuốn)
+INSERT INTO TON_KHO VALUES ('CN01', 'S003', 3);  -- Sắp hết hàng (< 5 cuốn)
+INSERT INTO TON_KHO VALUES ('CN02', 'S001', 30);
+INSERT INTO TON_KHO VALUES ('CN02', 'S004', 21);
