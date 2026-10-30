@@ -4,10 +4,10 @@ INSERT INTO CHI_NHANH VALUES ('CN01', 'Hiệu sách Cơ sở Hà Đông', 'Km10 
 INSERT INTO CHI_NHANH VALUES ('CN02', 'Hiệu sách Cơ sở Cầu Giấy', '122 Hoàng Quốc Việt, Cầu Giấy, Hà Nội', '0900002222', 'Hoạt động');
 
 -- 2. Dữ liệu NHAN_VIEN
-INSERT INTO NHAN_VIEN VALUES ('NV01', 'Nguyễn Việt Anh', '1999-05-12', 'Nam', '0900002233', 'Quản trị viên', '2024-01-10', 'Đang làm việc', 'CN01');
-INSERT INTO NHAN_VIEN VALUES ('NV02', 'Đặng Đình Quang', '2003-08-20', 'Nam', '0900003344', 'Nhân viên bán hàng', '2025-02-15', 'Đang làm việc', 'CN01');
-INSERT INTO NHAN_VIEN VALUES ('NV03', 'Đoàn Mạnh Sơn', '2002-11-05', 'Nam', '0900004455', 'Nhân viên nhập hàng', '2025-03-01', 'Đang làm việc', 'CN01');
-INSERT INTO NHAN_VIEN VALUES ('NV04', 'Mạc Đình Toàn', '2003-04-18', 'Nam', '0900005566', 'Nhân viên bán hàng', '2025-06-01', 'Đang làm việc', 'CN02');
+INSERT INTO NHAN_VIEN(MaNV,HoTen,NgaySinh,GioiTinh,SoDienThoai,ChucVu,NgayVaoLam,TrangThai,MaCN) VALUES ('NV01', 'Nguyễn Việt Anh', '1999-05-12', 'Nam', '0900002233', 'Quản trị viên', '2024-01-10', 'Đang làm việc', 'CN01');
+INSERT INTO NHAN_VIEN(MaNV,HoTen,NgaySinh,GioiTinh,SoDienThoai,ChucVu,NgayVaoLam,TrangThai,MaCN) VALUES ('NV02', 'Đặng Đình Quang', '2003-08-20', 'Nam', '0900003344', 'Nhân viên bán hàng', '2025-02-15', 'Đang làm việc', 'CN01');
+INSERT INTO NHAN_VIEN(MaNV,HoTen,NgaySinh,GioiTinh,SoDienThoai,ChucVu,NgayVaoLam,TrangThai,MaCN) VALUES ('NV03', 'Đoàn Mạnh Sơn', '2002-11-05', 'Nam', '0900004455', 'Nhân viên nhập hàng', '2025-03-01', 'Đang làm việc', 'CN01');
+INSERT INTO NHAN_VIEN(MaNV,HoTen,NgaySinh,GioiTinh,SoDienThoai,ChucVu,NgayVaoLam,TrangThai,MaCN) VALUES ('NV04', 'Mạc Đình Toàn', '2003-04-18', 'Nam', '0900005566', 'Nhân viên bán hàng', '2025-06-01', 'Đang làm việc', 'CN02');
 
 -- 3. Dữ liệu KHACH_HANG
 INSERT INTO KHACH_HANG(MaKH,HoTen,SoDienThoai,Email,DiaChi,NgayDangKy) VALUES ('KH01', 'Phạm Trường An', '0900005678', 'demo@example.com', 'Thanh Xuân, Hà Nội', '2026-01-15');
