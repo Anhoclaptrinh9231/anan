@@ -19,10 +19,10 @@ INSERT INTO THE_LOAI VALUES ('TL02', 'Ngoại ngữ', 'Sách luyện thi tiếng
 INSERT INTO THE_LOAI VALUES ('TL03', 'Văn học', 'Tiểu thuyết, truyện ngắn trong nước và quốc tế');
 
 -- 5. Dữ liệu SACH
-INSERT INTO SACH VALUES ('S001', '978-604-80-1001', 'Bài giảng Cơ sở dữ liệu', 'Nguyễn Quỳnh Chi', 'NXB Thông tin và Truyền thông', 2024, 125000, 'Đang kinh doanh', 'TL01');
-INSERT INTO SACH VALUES ('S002', '978-604-80-1002', 'Cấu trúc dữ liệu và Giải thuật C++', 'Lê Minh Hoàng', 'NXB Đại học Quốc gia', 2025, 155000, 'Đang kinh doanh', 'TL01');
-INSERT INTO SACH VALUES ('S003', '978-604-80-1003', 'Minna no Nihongo Sơ cấp II (N4)', '3A Corporation', 'NXB Giáo dục Việt Nam', 2025, 110000, 'Đang kinh doanh', 'TL02');
-INSERT INTO SACH VALUES ('S004', '978-604-80-1004', 'Mắt Biếc', 'Nguyễn Nhật Ánh', 'NXB Trẻ', 2023, 95000, 'Đang kinh doanh', 'TL03');
+INSERT INTO SACH(MaSach,ISBN,TenSach,TacGia,NhaXuatBan,NamXuatBan,DonGiaBan,TrangThai,MaTL) VALUES ('S001', '978-604-80-1001', 'Bài giảng Cơ sở dữ liệu', 'Nguyễn Quỳnh Chi', 'NXB Thông tin và Truyền thông', 2024, 125000, 'Đang kinh doanh', 'TL01');
+INSERT INTO SACH(MaSach,ISBN,TenSach,TacGia,NhaXuatBan,NamXuatBan,DonGiaBan,TrangThai,MaTL) VALUES ('S002', '978-604-80-1002', 'Cấu trúc dữ liệu và Giải thuật C++', 'Lê Minh Hoàng', 'NXB Đại học Quốc gia', 2025, 155000, 'Đang kinh doanh', 'TL01');
+INSERT INTO SACH(MaSach,ISBN,TenSach,TacGia,NhaXuatBan,NamXuatBan,DonGiaBan,TrangThai,MaTL) VALUES ('S003', '978-604-80-1003', 'Minna no Nihongo Sơ cấp II (N4)', '3A Corporation', 'NXB Giáo dục Việt Nam', 2025, 110000, 'Đang kinh doanh', 'TL02');
+INSERT INTO SACH(MaSach,ISBN,TenSach,TacGia,NhaXuatBan,NamXuatBan,DonGiaBan,TrangThai,MaTL) VALUES ('S004', '978-604-80-1004', 'Mắt Biếc', 'Nguyễn Nhật Ánh', 'NXB Trẻ', 2023, 95000, 'Đang kinh doanh', 'TL03');
 
 -- 6. Dữ liệu NHA_CUNG_CAP
 INSERT INTO NHA_CUNG_CAP VALUES ('NCC01', 'Công ty Phát hành sách FAHASA', '60 Nguyễn Huệ, TP.HCM', '0900005796', 'demo@example.com');
