@@ -46,6 +46,7 @@ public class Bookstore {
             c.setSchema(DATABASE_URL.isBlank()?"BOOKSTORE_V2":"bookstore_v2");
             try(Reader r=Files.newBufferedReader(ROOT.resolve("sql/schema.sql"))) {RunScript.execute(c,r);}
             s.execute("ALTER TABLE KHACH_HANG ADD COLUMN IF NOT EXISTS NgaySinh DATE");
+            s.execute("ALTER TABLE NHAN_VIEN ADD COLUMN IF NOT EXISTS DaXoa BOOLEAN NOT NULL DEFAULT FALSE");
             boolean bookDeleteColumn=false;
             try(ResultSet cols=c.getMetaData().getColumns(null,c.getSchema(),DATABASE_URL.isBlank()?"SACH":"sach",null)) {
                 while(cols.next())if("DaXoa".equalsIgnoreCase(cols.getString("COLUMN_NAME")))bookDeleteColumn=true;
@@ -138,7 +139,7 @@ public class Bookstore {
                 case "/api/branches" -> query(c,"SELECT MaCN AS code,TenCN AS name,DiaChi AS address,SoDienThoai AS phone,TrangThai AS status FROM CHI_NHANH ORDER BY MaCN");
                 case "/api/genres" -> query(c,"SELECT MaTL AS code,TenTheLoai AS name,MoTa AS description FROM THE_LOAI ORDER BY TenTheLoai");
                 case "/api/customers" -> query(c,"SELECT MaKH AS code,HoTen AS name,SoDienThoai AS phone,Email AS email,DiaChi AS address,NgayDangKy AS registered,NgaySinh AS birth FROM KHACH_HANG ORDER BY MaKH");
-                case "/api/employees" -> query(c,"SELECT n.MaNV AS code,n.HoTen AS name,n.NgaySinh AS birth,n.GioiTinh AS gender,n.SoDienThoai AS phone,n.ChucVu AS role,n.NgayVaoLam AS joined,n.TrangThai AS status,n.MaCN AS branchcode,c.TenCN AS branch FROM NHAN_VIEN n JOIN CHI_NHANH c ON c.MaCN=n.MaCN ORDER BY n.MaNV");
+                case "/api/employees" -> query(c,"SELECT n.MaNV AS code,n.HoTen AS name,n.NgaySinh AS birth,n.GioiTinh AS gender,n.SoDienThoai AS phone,n.ChucVu AS role,n.NgayVaoLam AS joined,n.TrangThai AS status,n.MaCN AS branchcode,c.TenCN AS branch FROM NHAN_VIEN n JOIN CHI_NHANH c ON c.MaCN=n.MaCN WHERE n.DaXoa=FALSE ORDER BY n.MaNV");
                 case "/api/suppliers" -> query(c,"SELECT MaNCC AS code,TenNCC AS name,DiaChi AS address,SoDienThoai AS phone,Email AS email FROM NHA_CUNG_CAP ORDER BY MaNCC");
                 case "/api/sales" -> sales(c);
                 case "/api/purchases" -> query(c,"SELECT p.MaPN AS code,p.NgayNhap AS date,p.TrangThai AS status,n.TenNCC AS supplier,c.TenCN AS branch,v.HoTen AS employee,SUM(d.SoLuongNhap*d.DonGiaNhap) AS amount FROM PHIEU_NHAP p JOIN NHA_CUNG_CAP n ON n.MaNCC=p.MaNCC JOIN CHI_NHANH c ON c.MaCN=p.MaCN JOIN NHAN_VIEN v ON v.MaNV=p.MaNV JOIN CT_PHIEU_NHAP d ON d.MaPN=p.MaPN WHERE p.TrangThai<>'Đã hủy' GROUP BY p.MaPN,p.NgayNhap,p.TrangThai,n.TenNCC,c.TenCN,v.HoTen ORDER BY p.NgayNhap DESC,p.MaPN DESC");
@@ -283,7 +284,12 @@ public class Bookstore {
         }
         if(query(c,"SELECT "+key+" FROM "+table+" WHERE "+key+"=? FOR UPDATE",id).isEmpty())throw new IllegalArgumentException(label+" không tồn tại hoặc đã được xóa.");
         Object[] args=new Object[(int)refs.chars().filter(ch->ch=='?').count()];Arrays.fill(args,id);
-        if(!query(c,refs,args).isEmpty())throw new IllegalArgumentException(label+" đang được sử dụng bởi sách, nhân viên, tồn kho hoặc chứng từ. Cần chuyển dữ liệu liên quan trước khi xóa để giữ đúng báo cáo.");
+        boolean inUse=!query(c,refs,args).isEmpty();
+        if(table.equals("NHAN_VIEN")&&inUse) {
+            update(c,"UPDATE NHAN_VIEN SET TrangThai='Đã nghỉ việc',DaXoa=TRUE WHERE MaNV=?",id);
+            return;
+        }
+        if(inUse)throw new IllegalArgumentException(label+" đang được sử dụng bởi sách, nhân viên, tồn kho hoặc chứng từ. Cần chuyển dữ liệu liên quan trước khi xóa để giữ đúng báo cáo.");
         if(table.equals("CHI_NHANH"))update(c,"DELETE FROM TON_KHO WHERE MaCN=?",id);
         update(c,"DELETE FROM "+table+" WHERE "+key+"=?",id);
     }
@@ -292,7 +298,7 @@ public class Bookstore {
         String id=(sale?"HDB":"PN")+UUID.randomUUID().toString().replace("-","").substring(0,12).toUpperCase(Locale.ROOT);
         String branch=required(p,"branch"),employee=required(p,"employee");
         if(query(c,"SELECT MaCN FROM CHI_NHANH WHERE MaCN=? AND TrangThai='Hoạt động' FOR UPDATE",branch).isEmpty()) throw new IllegalArgumentException("Chi nhánh đang tạm ngừng hoặc không tồn tại.");
-        List<Map<String,Object>> staff=query(c,"SELECT MaCN AS branch,ChucVu AS role FROM NHAN_VIEN WHERE MaNV=? AND TrangThai='Đang làm việc' FOR UPDATE",employee);
+        List<Map<String,Object>> staff=query(c,"SELECT MaCN AS branch,ChucVu AS role FROM NHAN_VIEN WHERE MaNV=? AND TrangThai='Đang làm việc' AND DaXoa=FALSE FOR UPDATE",employee);
         if(staff.isEmpty()) throw new IllegalArgumentException("Nhân viên không đang làm việc.");
         String role=String.valueOf(staff.get(0).get("role"));
         if(!role.equals("Quản trị viên")&&(!branch.equals(staff.get(0).get("branch"))||!(sale?role.equals("Nhân viên bán hàng"):Set.of("Nhân viên nhập hàng","Nhân viên kho").contains(role)))) throw new IllegalArgumentException("Hãy chọn nhân viên đúng chi nhánh và vai trò.");
