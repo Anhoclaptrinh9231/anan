@@ -197,7 +197,7 @@ public class Bookstore {
                 switch(path) {
                     case "/api/products" -> {
                         id=sizedCode(p,"code",15);
-                        Object[] args={nullable(p,"isbn"),required(p,"name"),required(p,"author"),required(p,"publisher"),integer(required(p,"year"),1900,9999),money(required(p,"price")),choice(p,"status","Đang kinh doanh","Đang kinh doanh","Ngừng kinh doanh"),required(p,"genre"),id};
+                        Object[] args={nullable(p,"isbn"),required(p,"name"),required(p,"author"),required(p,"publisher"),integer(required(p,"year"),1900,vietnamToday().getYear()),money(required(p,"price")),choice(p,"status","Đang kinh doanh","Đang kinh doanh","Ngừng kinh doanh"),required(p,"genre"),id};
                         if(editing(c,p,"SACH","MaSach",id)) update(c,"UPDATE SACH SET ISBN=?,TenSach=?,TacGia=?,NhaXuatBan=?,NamXuatBan=?,DonGiaBan=?,TrangThai=?,MaTL=? WHERE MaSach=?",args);
                         else {
                             update(c,"INSERT INTO SACH(ISBN,TenSach,TacGia,NhaXuatBan,NamXuatBan,DonGiaBan,TrangThai,MaTL,MaSach) VALUES(?,?,?,?,?,?,?,?,?)",args);
@@ -227,7 +227,7 @@ public class Bookstore {
                     case "/api/customers" -> {
                         id=sizedCode(p,"code",10);
                         String original=val(p,"original",id);
-                        Object[] args={required(p,"name"),phone(p),nullable(p,"email"),nullable(p,"address"),date(val(p,"registered",LocalDate.now().toString())),nullable(p,"birth")==null?null:date(required(p,"birth")),id};
+                        Object[] args={personName(p),phone(p),nullable(p,"email"),nullable(p,"address"),pastDate(val(p,"registered",vietnamToday().toString())),nullable(p,"birth")==null?null:pastDate(required(p,"birth")),id};
                         if(editing(c,p,"KHACH_HANG","MaKH",original)) {
                             Object[] edited=Arrays.copyOf(args,args.length+1);edited[args.length]=original;
                             update(c,"UPDATE KHACH_HANG SET HoTen=?,SoDienThoai=?,Email=?,DiaChi=?,NgayDangKy=?,NgaySinh=?,MaKH=? WHERE MaKH=?",edited);
@@ -255,9 +255,9 @@ public class Bookstore {
                     }
                     case "/api/employees" -> {
                         id=sizedCode(p,"code",10);
-                        LocalDate birth=date(required(p,"birth"));
-                        if(birth.isAfter(LocalDate.now())) throw new IllegalArgumentException("Ngày sinh không được ở tương lai.");
-                        Object[] args={required(p,"name"),birth,choice(p,"gender","Khác","Nam","Nữ","Khác"),phone(p),choice(p,"role","Nhân viên bán hàng","Quản trị viên","Nhân viên bán hàng","Nhân viên kho","Nhân viên nhập hàng"),date(required(p,"joined")),choice(p,"status","Đang làm việc","Đang làm việc","Tạm nghỉ","Đã nghỉ việc"),required(p,"branch"),id};
+                        LocalDate birth=pastDate(required(p,"birth"));
+                        
+                        Object[] args={personName(p),birth,choice(p,"gender","Khác","Nam","Nữ","Khác"),phone(p),choice(p,"role","Nhân viên bán hàng","Quản trị viên","Nhân viên bán hàng","Nhân viên kho","Nhân viên nhập hàng"),pastDate(required(p,"joined")),choice(p,"status","Đang làm việc","Đang làm việc","Tạm nghỉ","Đã nghỉ việc"),required(p,"branch"),id};
                         if(editing(c,p,"NHAN_VIEN","MaNV",id)) update(c,"UPDATE NHAN_VIEN SET HoTen=?,NgaySinh=?,GioiTinh=?,SoDienThoai=?,ChucVu=?,NgayVaoLam=?,TrangThai=?,MaCN=? WHERE MaNV=?",args);
                         else update(c,"INSERT INTO NHAN_VIEN(HoTen,NgaySinh,GioiTinh,SoDienThoai,ChucVu,NgayVaoLam,TrangThai,MaCN,MaNV) VALUES(?,?,?,?,?,?,?,?,?)",args);
                     }
@@ -364,7 +364,16 @@ public class Bookstore {
     static String nullable(Map<String,List<String>> p,String key) {String v=val(p,key,"");return v.isBlank()?null:v;}
     static String phone(Map<String,List<String>> p) {String v=required(p,"phone");if(v.length()>15||!v.matches("\\+?[0-9]+")) throw new IllegalArgumentException("Số điện thoại chỉ gồm chữ số, có thể bắt đầu bằng + và tối đa 15 ký tự.");return v;}
     static String choice(Map<String,List<String>> p,String key,String fallback,String...options) {String v=val(p,key,fallback);if(!List.of(options).contains(v))throw new IllegalArgumentException("Giá trị "+key+" không hợp lệ.");return v;}
-    static java.time.LocalDateTime timestamp(String value) {try{return value.length()==10?date(value).atStartOfDay():java.time.LocalDateTime.parse(value.replace(' ','T'));}catch(Exception ex){throw new IllegalArgumentException("Ngày giờ không hợp lệ.");}}
+    static LocalDate vietnamToday() {return LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));}
+    static LocalDate pastDate(String value) {LocalDate d=date(value);if(d.isAfter(vietnamToday()))throw new IllegalArgumentException("Ngày không được lớn hơn ngày hiện tại.");return d;}
+    static String personName(Map<String,List<String>> p) {
+        String name=java.text.Normalizer.normalize(required(p,"name"),java.text.Normalizer.Form.NFC).strip().replaceAll("[\\s\\p{Z}]+"," ");
+        if(!name.matches("[A-Za-zÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúýĂăĐđĨĩŨũƠơƯưẠ-ỹ]+(?: [A-Za-zÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúýĂăĐđĨĩŨũƠơƯưẠ-ỹ]+)*"))throw new IllegalArgumentException("Họ tên chỉ gồm chữ cái tiếng Việt và khoảng trắng, không được chứa số hoặc ký tự đặc biệt.");
+        StringJoiner result=new StringJoiner(" ");
+        for(String word:name.toLowerCase(Locale.forLanguageTag("vi")).split(" "))result.add(word.substring(0,1).toUpperCase(Locale.forLanguageTag("vi"))+word.substring(1));
+        return result.toString();
+    }
+    static java.time.LocalDateTime timestamp(String value) {java.time.LocalDateTime t;try{t=value.length()==10?date(value).atStartOfDay():java.time.LocalDateTime.parse(value.replace(' ','T'));}catch(Exception ex){throw new IllegalArgumentException("Ngày giờ không hợp lệ.");}pastDate(t.toLocalDate().toString());return t;}
 
     static Object report(Connection c,Map<String,List<String>> p) throws Exception {
         LocalDate from=date(val(p,"from","2026-01-01")),to=date(val(p,"to","2026-12-31"));
