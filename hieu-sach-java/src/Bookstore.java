@@ -95,7 +95,10 @@ public class Bookstore {
                     if(!Optional.ofNullable(x.getRequestHeaders().getFirst("Content-Type")).orElse("").startsWith("application/x-www-form-urlencoded")) throw new IllegalArgumentException("Định dạng form không hợp lệ.");
                     byte[] body=x.getRequestBody().readNBytes(65537);
                     if(body.length>65536) throw new IllegalArgumentException("Form quá lớn.");
-                    send(x,201,post(path,params(new String(body,StandardCharsets.UTF_8))));
+                    Map<String,List<String>> form=params(new String(body,StandardCharsets.UTF_8));
+                    if(path.equals("/api/ai/chat")||path.equals("/api/ai/report")) {
+                        send(x,200,path.endsWith("/chat")?BookstoreAi.chat(form):BookstoreAi.analyze(form));
+                    } else send(x,201,post(path,form));
                 } else send(x,200,get(path,params(x.getRequestURI().getRawQuery())));
                 return;
             }
@@ -375,6 +378,12 @@ public class Bookstore {
     }
     static java.time.LocalDateTime timestamp(String value) {java.time.LocalDateTime t;try{t=value.length()==10?date(value).atStartOfDay():java.time.LocalDateTime.parse(value.replace(' ','T'));}catch(Exception ex){throw new IllegalArgumentException("Ngày giờ không hợp lệ.");}pastDate(t.toLocalDate().toString());return t;}
 
+    static final String REVENUE_SQL="WITH DT AS (SELECT h.MaCN,COUNT(DISTINCT h.MaHDB) AS SoHD,SUM(d.SoLuongBan) AS SLBan,SUM(d.SoLuongBan*d.DonGiaBanThucTe) AS DoanhThu FROM HOA_DON_BAN h JOIN CT_HOA_DON_BAN d ON d.MaHDB=h.MaHDB WHERE h.TrangThai='Hoàn tất' AND h.NgayBan>=? AND h.NgayBan<? GROUP BY h.MaCN), CP AS (SELECT p.MaCN,COUNT(DISTINCT p.MaPN) AS SoPN,SUM(d.SoLuongNhap) AS SLNhap,SUM(d.SoLuongNhap*d.DonGiaNhap) AS ChiPhi FROM PHIEU_NHAP p JOIN CT_PHIEU_NHAP d ON d.MaPN=p.MaPN WHERE p.TrangThai='Đã xác nhận' AND p.NgayNhap>=? AND p.NgayNhap<? GROUP BY p.MaCN) SELECT c.MaCN AS \"Mã CN\",c.TenCN AS \"Chi nhánh\",COALESCE(DT.SoHD,0) AS \"Hóa đơn hoàn tất\",COALESCE(DT.SLBan,0) AS \"Số sách bán\",COALESCE(DT.DoanhThu,0) AS \"Doanh thu (đ)\",COALESCE(CP.SoPN,0) AS \"Phiếu đã xác nhận\",COALESCE(CP.SLNhap,0) AS \"Số sách nhập\",COALESCE(CP.ChiPhi,0) AS \"Chi phí nhập (đ)\" FROM CHI_NHANH c LEFT JOIN DT ON DT.MaCN=c.MaCN LEFT JOIN CP ON CP.MaCN=c.MaCN WHERE (?='' OR c.MaCN=?) ORDER BY COALESCE(DT.DoanhThu,0) DESC,c.MaCN";
+
+    static List<Object> revenueParameters(LocalDate from,LocalDate to,String branch) {
+        return List.of(from.atStartOfDay(),to.plusDays(1).atStartOfDay(),from.atStartOfDay(),to.plusDays(1).atStartOfDay(),branch,branch);
+    }
+
     static Object report(Connection c,Map<String,List<String>> p) throws Exception {
         LocalDate from=date(val(p,"from","2026-01-01")),to=date(val(p,"to","2026-12-31"));
         if(to.isBefore(from)||to.equals(LocalDate.MAX))throw new IllegalArgumentException("Khoảng ngày không hợp lệ.");
@@ -382,8 +391,7 @@ public class Bookstore {
         List<Map<String,Object>> sections=new ArrayList<>();String title;
         if(val(p,"kind","revenue").equals("revenue")) {
             title="Doanh thu và chi phí nhập theo chi nhánh";
-            String sql="WITH DT AS (SELECT h.MaCN,COUNT(DISTINCT h.MaHDB) AS SoHD,SUM(d.SoLuongBan) AS SLBan,SUM(d.SoLuongBan*d.DonGiaBanThucTe) AS DoanhThu FROM HOA_DON_BAN h JOIN CT_HOA_DON_BAN d ON d.MaHDB=h.MaHDB WHERE h.TrangThai='Hoàn tất' AND h.NgayBan>=? AND h.NgayBan<? GROUP BY h.MaCN), CP AS (SELECT p.MaCN,COUNT(DISTINCT p.MaPN) AS SoPN,SUM(d.SoLuongNhap) AS SLNhap,SUM(d.SoLuongNhap*d.DonGiaNhap) AS ChiPhi FROM PHIEU_NHAP p JOIN CT_PHIEU_NHAP d ON d.MaPN=p.MaPN WHERE p.TrangThai='Đã xác nhận' AND p.NgayNhap>=? AND p.NgayNhap<? GROUP BY p.MaCN) SELECT c.MaCN AS \"Mã CN\",c.TenCN AS \"Chi nhánh\",COALESCE(DT.SoHD,0) AS \"Hóa đơn hoàn tất\",COALESCE(DT.SLBan,0) AS \"Số sách bán\",COALESCE(DT.DoanhThu,0) AS \"Doanh thu (đ)\",COALESCE(CP.SoPN,0) AS \"Phiếu đã xác nhận\",COALESCE(CP.SLNhap,0) AS \"Số sách nhập\",COALESCE(CP.ChiPhi,0) AS \"Chi phí nhập (đ)\" FROM CHI_NHANH c LEFT JOIN DT ON DT.MaCN=c.MaCN LEFT JOIN CP ON CP.MaCN=c.MaCN WHERE (?='' OR c.MaCN=?) ORDER BY COALESCE(DT.DoanhThu,0) DESC,c.MaCN";
-            sections.add(reportSection(c,title,sql,List.of(from.atStartOfDay(),to.plusDays(1).atStartOfDay(),from.atStartOfDay(),to.plusDays(1).atStartOfDay(),branch,branch)));
+            sections.add(reportSection(c,title,REVENUE_SQL,revenueParameters(from,to,branch)));
         } else if(val(p,"kind","").equals("inventory")) {
             title="Cảnh báo tồn kho và sách bán chạy";
             String sql="SELECT c.MaCN AS \"Mã CN\",c.TenCN AS \"Chi nhánh\",s.MaSach AS \"Mã sách\",s.ISBN AS \"ISBN\",s.TenSach AS \"Tên sách\",l.TenTheLoai AS \"Thể loại\",t.SoLuongTon AS \"Tồn kho\" FROM TON_KHO t JOIN CHI_NHANH c ON c.MaCN=t.MaCN JOIN SACH s ON s.MaSach=t.MaSach JOIN THE_LOAI l ON l.MaTL=s.MaTL WHERE t.SoLuongTon<=? AND s.TrangThai='Đang kinh doanh' AND (?='' OR c.MaCN=?) ORDER BY t.SoLuongTon,c.MaCN,s.MaSach";

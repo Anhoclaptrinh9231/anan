@@ -20,7 +20,7 @@ if not exist "lib\h2-2.5.252.jar" (
 )
 if not exist build mkdir build
 echo Dang bien dich Java...
-javac -encoding UTF-8 --release 21 -cp "lib/*" -d build src\Bookstore.java
+javac -encoding UTF-8 --release 21 -cp "lib/*" -d build src\*.java
 if errorlevel 1 (
   pause
   exit /b 1
