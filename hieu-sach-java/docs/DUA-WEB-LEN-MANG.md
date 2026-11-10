@@ -14,7 +14,11 @@ Render chạy máy chủ Java trong Docker và cấp địa chỉ HTTPS. Dữ li
    | `BOOKSTORE_DB_USER` | Tài khoản ứng dụng trên máy chủ MySQL |
    | `BOOKSTORE_DB_PASSWORD` | Mật khẩu của tài khoản đó |
 
-   Khi `BOOKSTORE_PUBLIC=true`, ứng dụng mặc định xác minh chứng chỉ và tên máy chủ MySQL. Dùng tên máy chủ và cấu hình chứng chỉ do nhà cung cấp MySQL cấp. [Cấu hình TLS của MySQL Connector/J](https://dev.mysql.com/doc/connector-j/en/connector-j-connp-props-security.html)
+   Khi `BOOKSTORE_PUBLIC=true`, ứng dụng xác minh chứng chỉ và tên máy chủ MySQL. Nếu nhà cung cấp cấp CA riêng, mã hóa tệp CA dạng PEM thành Base64 và đặt vào `BOOKSTORE_DB_CA_PEM_BASE64`. Dockerfile tạo kho chứng chỉ cho JDBC trong lúc build. Thêm chuỗi sau vào cuối URL JDBC và chọn **Save, rebuild, and deploy**. [Cấu hình TLS của MySQL Connector/J](https://dev.mysql.com/doc/connector-j/en/connector-j-connp-props-security.html)
+
+   ```text
+   ?trustCertificateKeyStoreUrl=file:/app/mysql-ca.p12&trustCertificateKeyStoreType=PKCS12&trustCertificateKeyStorePassword=changeit
+   ```
 
 4. Triển khai dịch vụ rồi mở đường dẫn `/api/health`. Kiểm tra kết quả có `"status":"ok"` và `"database":"MySQL"`.
 

@@ -1,10 +1,11 @@
-# Thông tin bản công khai trước khi chuyển sang MySQL
+# Website Hiệu sách Tri Thức
 
-- Website: https://hieu-sach-tri-thuc.onrender.com
-- Mã nguồn: https://github.com/Anhoclaptrinh9231/anan
-- Quản lý dịch vụ: https://dashboard.render.com/web/srv-dbh2on59el5s73ak1p20
-- Blueprint: https://dashboard.render.com/blueprint/exs-dbh2k0gu01pc73avmj20
+- [Mở website trên Render](https://hieu-sach-tri-thuc.onrender.com)
+- [Xem mã nguồn trên GitHub](https://github.com/Anhoclaptrinh9231/anan)
+- [Kiểm tra website kết nối MySQL](https://hieu-sach-tri-thuc.onrender.com/api/health)
 
-Lần triển khai trước dùng PostgreSQL. Mã nguồn hiện tại dùng MySQL. Để cập nhật link công khai, cần một máy chủ MySQL có thể truy cập từ Render và cấu hình kết nối mới.
+Render chạy ứng dụng Java và kết nối tới MySQL 8.4 trên Aiven. Dữ liệu của 11 bảng từ bản công khai trước đã được chuyển sang MySQL.
+
+Cơ sở dữ liệu dùng tín dụng thử Aiven tối đa 30 ngày. Khi hết thời gian hoặc hết tín dụng, Aiven sẽ dừng MySQL nếu dự án chưa có phương thức thanh toán. [Thông tin dùng thử Aiven](https://aiven.io/docs/platform/concepts/service-pricing#free-trials)
 
 [Hướng dẫn triển khai bản MySQL](DUA-WEB-LEN-MANG.md)

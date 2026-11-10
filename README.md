@@ -1,5 +1,7 @@
 # Bắt đầu với website hiệu sách
 
+[Mở website Hiệu sách Tri Thức trên Render](https://hieu-sach-tri-thuc.onrender.com)
+
 Bản hiện tại dùng 11 bảng theo mô tả và ERD của nhóm ngày 29/10/2026. Đọc [đối chiếu bản mới](hieu-sach-java/docs/CAP-NHAT-MO-HINH-11-BANG.md).
 
 ## Chạy trên máy
