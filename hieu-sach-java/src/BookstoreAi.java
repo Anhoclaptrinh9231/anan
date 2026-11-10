@@ -1,8 +1,8 @@
-import org.h2.util.json.JSONArray;
-import org.h2.util.json.JSONObject;
-import org.h2.util.json.JSONString;
-import org.h2.util.json.JSONStringSource;
-import org.h2.util.json.JSONValueTarget;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.Strictness;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -27,6 +27,7 @@ final class BookstoreAi {
     private static final String KEY = System.getenv().getOrDefault("DEEPSEEK_API_KEY", "").strip();
     private static final String MODEL = System.getenv().getOrDefault("DEEPSEEK_MODEL", "deepseek-flash").strip();
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
+    private static final Gson JSON = new GsonBuilder().setStrictness(Strictness.STRICT).create();
     private static final Semaphore IN_FLIGHT = new Semaphore(3);
     private static final Deque<Long> REQUEST_TIMES = new ArrayDeque<>();
     private static final int BOOK_LIMIT = 20;
@@ -112,7 +113,7 @@ final class BookstoreAi {
             context.put("branches", branches.stream().limit(30).toList());
             context.put("genres", Bookstore.query(c, """
                 SELECT MaTL AS code,TenTheLoai AS name,MoTa AS description FROM THE_LOAI
-                ORDER BY TenTheLoai FETCH FIRST 30 ROWS ONLY
+                ORDER BY TenTheLoai LIMIT 30
                 """));
             context.put("catalogSize", catalog.size());
             context.put("shownBooksAreExcerpt", books.size() < catalog.size());
@@ -382,7 +383,7 @@ final class BookstoreAi {
             return Map.of("source", "deepseek", "answer", complete(messages, tokens));
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
-        } catch (IOException | IllegalArgumentException | ClassCastException | NullPointerException | IndexOutOfBoundsException ex) {
+        } catch (IOException | JsonParseException | IllegalArgumentException | IllegalStateException | ClassCastException | NullPointerException | IndexOutOfBoundsException ex) {
             System.err.println("DeepSeek không trả về kết quả hợp lệ (" + ex.getClass().getSimpleName() + ").");
         } finally {
             IN_FLIGHT.release();
@@ -412,11 +413,13 @@ final class BookstoreAi {
             .build();
         var response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) throw new IOException("DeepSeek HTTP " + response.statusCode());
-        JSONObject body = (JSONObject) JSONStringSource.parse(response.body(), new JSONValueTarget());
-        JSONArray choices = (JSONArray) body.getFirst("choices");
-        JSONObject choice = (JSONObject) choices.getElement(0);
-        JSONObject answer = (JSONObject) choice.getFirst("message");
-        String text = ((JSONString) answer.getFirst("content")).getString().strip();
+        JsonObject body = JSON.fromJson(response.body(), JsonObject.class);
+        JsonObject choice = body.getAsJsonArray("choices").get(0).getAsJsonObject();
+        var content = choice.getAsJsonObject("message").get("content");
+        if (content == null || !content.isJsonPrimitive() || !content.getAsJsonPrimitive().isString()) {
+            throw new IOException("Missing text in DeepSeek response");
+        }
+        String text = content.getAsString().strip();
         if (text.isBlank()) throw new IOException("Empty DeepSeek response");
         return text;
     }

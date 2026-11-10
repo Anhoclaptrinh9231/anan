@@ -1,4 +1,3 @@
-import java.nio.file.*;
 import java.sql.*;
 import java.util.*;
 
@@ -11,22 +10,17 @@ public class ModelTest {
  @SuppressWarnings("unchecked") static String create(String path,Map<String,List<String>> p)throws Exception{return String.valueOf(((Map<String,Object>)Bookstore.post(path,p)).get("code"));}
  static Map<String,List<String>> purchase(String status){return f("branch","CN01","employee","NV03","supplier","NCC02","date","2026-10-29T12:00","status",status,"product","S001","quantity","5","price","90000");}
  public static void main(String[]a)throws Exception{
-  if(System.getenv("DATABASE_URL")==null){System.setProperty("bookstore.data","test-output/model-"+UUID.randomUUID()+"/db");Files.createDirectories(Bookstore.ROOT.resolve(System.getProperty("bookstore.data")).getParent());}
-  try(Connection c=Bookstore.rawDatabase()){Bookstore.update(c,"CREATE TABLE IF NOT EXISTS LEGACY_SENTINEL(Id INT PRIMARY KEY)");}
-  Bookstore.initialize();
+  MysqlTests.initialize();
+  ok(number("SELECT COUNT(*) AS n FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_TYPE='BASE TABLE'")==11,"exactly 11 MySQL tables");
   ok(number("SELECT COUNT(*) AS n FROM SACH")==4&&number("SELECT COUNT(*) AS n FROM CHI_NHANH")==2,"new 11-table model and specified sample data initialized");
-  try(Connection c=Bookstore.rawDatabase()){ok(Bookstore.query(c,"SELECT COUNT(*) AS n FROM LEGACY_SENTINEL").size()==1,"legacy schema remains intact");}
   ok(number("SELECT SoLuongTon AS n FROM TON_KHO WHERE MaCN='CN01' AND MaSach='S001'")==47,"branch-specific initial inventory matches specification");
   String pending=create("/api/purchases",purchase("Chờ xác nhận"));
   ok(number("SELECT SoLuongTon AS n FROM TON_KHO WHERE MaCN='CN01' AND MaSach='S001'")==47,"pending purchase does not add stock");
   Bookstore.post("/api/purchases/confirm",f("code",pending));
   ok(number("SELECT SoLuongTon AS n FROM TON_KHO WHERE MaCN='CN01' AND MaSach='S001'")==52,"confirmed purchase adds stock at receiving branch");
   Bookstore.post("/api/purchases/delete",f("code",pending));
-  ok(number("SELECT SoLuongTon AS n FROM TON_KHO WHERE MaCN='CN01' AND MaSach='S001'")==47&&number("SELECT COUNT(*) AS n FROM PHIEU_NHAP WHERE MaPN=? AND TrangThai='Đã hủy'",pending)==1,"delete purchase reverses stock and retains cancelled document");
+  ok(number("SELECT SoLuongTon AS n FROM TON_KHO WHERE MaCN='CN01' AND MaSach='S001'")==47&&number("SELECT COUNT(*) AS n FROM PHIEU_NHAP WHERE MaPN=?",pending)==0,"delete purchase reverses stock and removes the document");
   reject("/api/purchases/delete",f("code",pending));
-  Bookstore.post("/api/purchases/restore",f("code",pending));
-  ok(number("SELECT SoLuongTon AS n FROM TON_KHO WHERE MaCN='CN01' AND MaSach='S001'")==47,"restoring purchase leaves stock unchanged until confirmed");
-  Bookstore.post("/api/purchases/delete",f("code",pending));
   String sale=create("/api/sales",f("branch","CN01","employee","NV02","date","2026-10-29T13:00","product","S001","quantity","2","price","120000.50","payment","Chuyển khoản"));
   ok(number("SELECT SoLuongTon AS n FROM TON_KHO WHERE MaCN='CN01' AND MaSach='S001'")==45&&number("SELECT SoLuongTon AS n FROM TON_KHO WHERE MaCN='CN02' AND MaSach='S001'")==30,"sale only reduces selected branch");
   ok(number("SELECT COUNT(*) AS n FROM HOA_DON_BAN WHERE MaHDB=? AND MaKH IS NULL",sale)==1,"walk-in customer uses nullable customer key");
@@ -52,6 +46,8 @@ public class ModelTest {
   Bookstore.post("/api/products/delete",f("code","S001"));
   ok(number("SELECT COUNT(*) AS n FROM SACH WHERE MaSach='S001' AND TrangThai='Ngừng kinh doanh'")==1,"stopping a book preserves historical references");
   reject("/api/sales",f("branch","CN01","employee","NV02","date","2026-10-29","product","S001","quantity","1","price","1"));
+  Bookstore.initialize();
+  ok(number("SELECT COUNT(*) AS n FROM HOA_DON_BAN WHERE MaHDB=? AND TrangThai='Đã hủy'",sale)==1,"reinitializing preserves existing MySQL data");
   System.out.println(checks+" critical checks passed.");
  }
 }

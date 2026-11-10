@@ -1,5 +1,4 @@
-# Lua chon neu dung PostgreSQL ben ngoai (vi du Neon Free).
-# Khi tao Blueprint, chon file nay thay cho render.yaml o goc.
+# Blueprint cho dich vu web voi MySQL 8.4 ben ngoai.
 services:
   - type: web
     name: hieu-sach-tri-thuc
@@ -13,5 +12,9 @@ services:
     envVars:
       - key: BOOKSTORE_PUBLIC
         value: "true"
-      - key: DATABASE_URL
+      - key: BOOKSTORE_DB_URL
+        sync: false
+      - key: BOOKSTORE_DB_USER
+        sync: false
+      - key: BOOKSTORE_DB_PASSWORD
         sync: false

@@ -1,0 +1,3 @@
+BOOKSTORE_DB_URL=jdbc:mysql://127.0.0.1:3306/bookstore_v2
+BOOKSTORE_DB_USER=hieusach
+BOOKSTORE_DB_PASSWORD=

@@ -1,4 +1,5 @@
 @echo off
+setlocal
 chcp 65001 >nul
 cd /d "%~dp0"
 where java >nul 2>nul
@@ -13,19 +14,23 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-if not exist "lib\h2-2.5.252.jar" (
-  echo Thieu thu vien lib\h2-2.5.252.jar. Hay copy ca thu muc du an.
-  pause
-  exit /b 1
+call "%~dp0TAI-THU-VIEN.bat"
+if errorlevel 1 goto failed
+if exist "data\START-MYSQL.bat" (
+  call "data\START-MYSQL.bat"
+  if errorlevel 1 goto failed
 )
 if not exist build mkdir build
 echo Dang bien dich Java...
 javac -encoding UTF-8 --release 21 -cp "lib/*" -d build src\*.java
-if errorlevel 1 (
-  pause
-  exit /b 1
-)
-echo Mo trinh duyet tai http://localhost:8080
+if errorlevel 1 goto failed
 echo Giu cua so nay mo khi demo. Dung web bang Ctrl+C.
 java -cp "build;lib/*" Bookstore
+if errorlevel 1 goto failed
 pause
+exit /b 0
+
+:failed
+echo Khong khoi dong duoc web. Xem BAT-DAU-O-DAY.md.
+pause
+exit /b 1

@@ -1,6 +1,5 @@
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import org.h2.tools.RunScript;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.*;
@@ -11,66 +10,73 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.Executors;
 
-/** Java 21 + JDBC. Khong can Node, Maven hay may chu CSDL rieng. */
+/** Máy chủ HTTP Java 21 kết nối MySQL qua JDBC. */
 public class Bookstore {
     static final Path ROOT = Path.of(System.getProperty("bookstore.root", ".")).toAbsolutePath().normalize();
-    static final String URL = "jdbc:h2:file:" + ROOT.resolve(System.getProperty("bookstore.data", "data/hieusach")).toString().replace('\\','/') + ";DB_CLOSE_DELAY=-1";
-    static final String DATABASE_URL = System.getenv().getOrDefault("DATABASE_URL", "");
     static final boolean PUBLIC_DEMO = Boolean.parseBoolean(System.getenv().getOrDefault("BOOKSTORE_PUBLIC", "false"));
+    private static final Properties LOCAL_DATABASE = PUBLIC_DEMO ? new Properties() : readLocalDatabase();
+    static final String DATABASE_URL = databaseSetting("BOOKSTORE_DB_URL", PUBLIC_DEMO ? "" : "jdbc:mysql://127.0.0.1:3306/bookstore_v2");
     static final List<String> TABLES = List.of("CHI_NHANH","NHAN_VIEN","KHACH_HANG","THE_LOAI","SACH","NHA_CUNG_CAP","PHIEU_NHAP","CT_PHIEU_NHAP","HOA_DON_BAN","CT_HOA_DON_BAN","TON_KHO");
-    static Connection rawDatabase() throws SQLException {
-        if (DATABASE_URL.isBlank()) return DriverManager.getConnection(URL, "sa", "");
-        try {
-            URI u=URI.create(DATABASE_URL);
-            if(!Set.of("postgres","postgresql").contains(u.getScheme())||u.getHost()==null||u.getRawUserInfo()==null)
-                throw new IllegalArgumentException("DATABASE_URL phải là địa chỉ kết nối PostgreSQL.");
-            String[] account=u.getRawUserInfo().split(":",2);
-            Properties props=new Properties();
-            props.setProperty("user",URLDecoder.decode(account[0].replace("+","%2B"),StandardCharsets.UTF_8));
-            props.setProperty("password",account.length>1?URLDecoder.decode(account[1].replace("+","%2B"),StandardCharsets.UTF_8):"");
-            props.setProperty("connectTimeout","15");props.setProperty("socketTimeout","45");
-            String jdbc="jdbc:postgresql://"+u.getHost()+(u.getPort()<0?"":":"+u.getPort())+u.getRawPath()+(u.getRawQuery()==null?"":"?"+u.getRawQuery());
-            return DriverManager.getConnection(jdbc,props);
-        } catch(IllegalArgumentException ex) { throw new SQLException("Cấu hình DATABASE_URL không hợp lệ. Kiểm tra biến môi trường trên máy chủ.",ex); }
+
+    private static Properties readLocalDatabase() {
+        Properties settings = new Properties();
+        try (Reader reader = Files.newBufferedReader(ROOT.resolve("data/mysql.properties"))) {
+            settings.load(reader);
+        } catch (NoSuchFileException ignored) {
+            // Có thể cung cấp cấu hình qua biến môi trường.
+        } catch (IOException ex) {
+            throw new UncheckedIOException("Không đọc được data/mysql.properties.", ex);
+        }
+        return settings;
+    }
+
+    private static String databaseSetting(String name, String fallback) {
+        return System.getenv().getOrDefault(name, LOCAL_DATABASE.getProperty(name, fallback));
+    }
+
+    private static Connection connect(boolean runScript) throws SQLException {
+        String user = databaseSetting("BOOKSTORE_DB_USER", "");
+        String password = databaseSetting("BOOKSTORE_DB_PASSWORD", "");
+        if (!DATABASE_URL.matches("jdbc:mysql://[^/?]+/[^/?]+(?:\\?.*)?") || user.isBlank() || password.isEmpty()) {
+            throw new SQLException("Cần cấu hình BOOKSTORE_DB_URL, BOOKSTORE_DB_USER và BOOKSTORE_DB_PASSWORD. Xem BAT-DAU-O-DAY.md.");
+        }
+        Properties options = new Properties();
+        options.setProperty("user", user);
+        options.setProperty("password", password);
+        options.setProperty("connectTimeout", "5000");
+        options.setProperty("socketTimeout", "45000");
+        options.setProperty("sslMode", PUBLIC_DEMO ? "VERIFY_IDENTITY" : "REQUIRED");
+        options.setProperty("connectionTimeZone", "+07:00");
+        options.setProperty("forceConnectionTimeZoneToSession", "true");
+        options.setProperty("allowMultiQueries", Boolean.toString(runScript));
+        return DriverManager.getConnection(DATABASE_URL, options);
     }
 
     static Connection db() throws SQLException {
-        Connection c=rawDatabase();
-        try(Statement s=c.createStatement()) { c.setSchema(DATABASE_URL.isBlank()?"BOOKSTORE_V2":"bookstore_v2"); }
-        catch(SQLException ex) { c.close();throw ex; }
-        return c;
+        return connect(false);
     }
+
     static void initialize() throws Exception {
-        try(Connection c=rawDatabase();Statement s=c.createStatement()) {
-            s.execute("CREATE SCHEMA IF NOT EXISTS bookstore_v2");
-            c.setSchema(DATABASE_URL.isBlank()?"BOOKSTORE_V2":"bookstore_v2");
-            try(Reader r=Files.newBufferedReader(ROOT.resolve("sql/schema.sql"))) {RunScript.execute(c,r);}
-            s.execute("ALTER TABLE KHACH_HANG ADD COLUMN IF NOT EXISTS NgaySinh DATE");
-            s.execute("ALTER TABLE NHAN_VIEN ADD COLUMN IF NOT EXISTS DaXoa BOOLEAN NOT NULL DEFAULT FALSE");
-            boolean bookDeleteColumn=false;
-            try(ResultSet cols=c.getMetaData().getColumns(null,c.getSchema(),DATABASE_URL.isBlank()?"SACH":"sach",null)) {
-                while(cols.next())if("DaXoa".equalsIgnoreCase(cols.getString("COLUMN_NAME")))bookDeleteColumn=true;
+        try (Connection c = connect(true)) {
+            // Giữ khóa đến khi đóng kết nối để hai tiến trình không cùng nạp mẫu.
+            Object locked = query(c, "SELECT GET_LOCK(SHA2(CONCAT('bookstore:init:', LOWER(DATABASE())), 256), 30) AS locked").getFirst().get("locked");
+            if (!(locked instanceof Number result) || result.intValue() != 1) {
+                throw new SQLException("Một tiến trình khác đang khởi tạo CSDL hiệu sách.");
             }
-            if(!bookDeleteColumn) {
-                s.execute("ALTER TABLE SACH ADD COLUMN DaXoa BOOLEAN NOT NULL DEFAULT FALSE");
-                s.execute("UPDATE SACH SET DaXoa=TRUE WHERE TrangThai='Ngừng kinh doanh'");
+            runSql(c, "schema.sql");
+            if (query(c, "SELECT 1 FROM CHI_NHANH UNION ALL SELECT 1 FROM THE_LOAI UNION ALL SELECT 1 FROM KHACH_HANG UNION ALL SELECT 1 FROM NHA_CUNG_CAP LIMIT 1").isEmpty()) {
+                seed(c);
             }
-            boolean customerCascade=false;
-            try(ResultSet keys=c.getMetaData().getImportedKeys(null,c.getSchema(),DATABASE_URL.isBlank()?"HOA_DON_BAN":"hoa_don_ban")) {
-                while(keys.next())if("FK_HDB_KHACHHANG".equalsIgnoreCase(keys.getString("FK_NAME"))) customerCascade=keys.getShort("UPDATE_RULE")==DatabaseMetaData.importedKeyCascade&&keys.getShort("DELETE_RULE")==DatabaseMetaData.importedKeySetNull;
-            }
-            if(!customerCascade) {
-                s.execute("ALTER TABLE HOA_DON_BAN DROP CONSTRAINT FK_HDB_KHACHHANG");
-                s.execute("ALTER TABLE HOA_DON_BAN ADD CONSTRAINT FK_HDB_KHACHHANG FOREIGN KEY(MaKH) REFERENCES KHACH_HANG(MaKH) ON UPDATE CASCADE ON DELETE SET NULL");
-            }
-            if(((Number)query(c,"SELECT COUNT(*) AS n FROM CHI_NHANH").get(0).get("n")).intValue()==0) seed(c);
         }
     }
 
     public static void main(String[] args) throws Exception {
-        if(PUBLIC_DEMO&&DATABASE_URL.isBlank()) throw new IllegalArgumentException("Bản công khai cần DATABASE_URL PostgreSQL để dữ liệu không bị mất khi máy chủ khởi động lại.");
-        if(DATABASE_URL.isBlank()) Files.createDirectories(ROOT.resolve(System.getProperty("bookstore.data", "data/hieusach")).getParent());
-        initialize();
+        try {
+            initialize();
+        } catch (SQLException ex) {
+            System.err.println("Không khởi tạo được MySQL. Kiểm tra máy chủ và cấu hình trong BAT-DAU-O-DAY.md.");
+            throw ex;
+        }
         int port = Integer.parseInt(System.getProperty("bookstore.port", System.getenv().getOrDefault("PORT","8080")));
         String bind=System.getProperty("bookstore.bind",System.getenv().getOrDefault("BOOKSTORE_BIND","127.0.0.1"));
         HttpServer server=HttpServer.create(new InetSocketAddress(bind,port),0);
@@ -78,7 +84,7 @@ public class Bookstore {
         server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
         server.start();
         System.out.println("Hieu sach Tri Thuc - http://localhost:"+port);
-        System.out.println("CSDL: "+(DATABASE_URL.isBlank()?"H2 lưu tại máy":"PostgreSQL ngoài máy chủ web")+" | Dung: Ctrl+C");
+        System.out.println("CSDL: MySQL | Dung: Ctrl+C");
     }
 
     static void handle(HttpExchange x) throws IOException {
@@ -114,10 +120,12 @@ public class Bookstore {
         } catch(IllegalArgumentException ex) { send(x,400,Map.of("error",ex.getMessage()==null?"Dữ liệu không hợp lệ.":ex.getMessage())); }
         catch(SQLException ex) {
             String state=ex.getSQLState();
+            int code=ex.getErrorCode();
             String message="Không thể lưu dữ liệu. Vui lòng kiểm tra lại.";
-            if("23505".equals(state)) message="Mã, ISBN, tên thể loại hoặc số điện thoại đã tồn tại. Vui lòng kiểm tra lại.";
-            else if("23503".equals(state)||"23506".equals(state)) message="Khách hàng, nhân viên, hàng hóa hoặc chi nhánh không tồn tại.";
-            else if("23513".equals(state)) message="Dữ liệu vi phạm ràng buộc của CSDL.";
+            if(code==1062) message="Mã, ISBN, tên thể loại hoặc số điện thoại đã tồn tại. Vui lòng kiểm tra lại.";
+            else if(code==1451) message="Bản ghi đang được sử dụng ở bảng khác.";
+            else if(code==1452) message="Khách hàng, nhân viên, hàng hóa hoặc chi nhánh không tồn tại.";
+            else if(code==3819) message="Dữ liệu vi phạm ràng buộc của CSDL.";
             else if(state!=null&&state.startsWith("22")) message="Dữ liệu quá dài hoặc sai định dạng.";
             else ex.printStackTrace();
             send(x,400,Map.of("error",message));
@@ -128,12 +136,12 @@ public class Bookstore {
     static Object get(String path,Map<String,List<String>> p) throws Exception {
         try(Connection c=db()) {
             return switch(path) {
-                case "/api/health" -> Map.of("status","ok","application","tri-thuc-bookstore","model","11-tables-v2","database",DATABASE_URL.isBlank()?"H2":"PostgreSQL","publicDemo",PUBLIC_DEMO);
+                case "/api/health" -> Map.of("status","ok","application","tri-thuc-bookstore","model","11-tables-v2","database","MySQL","publicDemo",PUBLIC_DEMO);
                 case "/api/dashboard" -> {
                     Map<String,Object> out=new LinkedHashMap<>();
                     out.put("metrics",query(c,"SELECT (SELECT COUNT(*) FROM SACH WHERE DaXoa=FALSE) AS products,(SELECT COUNT(*) FROM KHACH_HANG) AS customers,(SELECT COUNT(*) FROM HOA_DON_BAN WHERE TrangThai='Hoàn tất') AS invoices,(SELECT COALESCE(SUM(d.SoLuongBan*d.DonGiaBanThucTe),0) FROM CT_HOA_DON_BAN d JOIN HOA_DON_BAN h ON h.MaHDB=d.MaHDB WHERE h.TrangThai='Hoàn tất') AS revenue,(SELECT COUNT(*) FROM TON_KHO t JOIN SACH s ON s.MaSach=t.MaSach WHERE t.SoLuongTon<=5 AND s.TrangThai='Đang kinh doanh') AS lowstock").get(0));
                     out.put("recent",sales(c));
-                    out.put("popular",query(c,"SELECT s.MaSach AS code,s.TenSach AS name,SUM(d.SoLuongBan) AS quantity FROM SACH s JOIN CT_HOA_DON_BAN d ON d.MaSach=s.MaSach JOIN HOA_DON_BAN h ON h.MaHDB=d.MaHDB WHERE h.TrangThai='Hoàn tất' GROUP BY s.MaSach,s.TenSach ORDER BY quantity DESC,s.MaSach FETCH FIRST 5 ROWS ONLY"));
+                    out.put("popular",query(c,"SELECT s.MaSach AS code,s.TenSach AS name,SUM(d.SoLuongBan) AS quantity FROM SACH s JOIN CT_HOA_DON_BAN d ON d.MaSach=s.MaSach JOIN HOA_DON_BAN h ON h.MaHDB=d.MaHDB WHERE h.TrangThai='Hoàn tất' GROUP BY s.MaSach,s.TenSach ORDER BY quantity DESC,s.MaSach LIMIT 5"));
                     yield out;
                 }
                 case "/api/products" -> books(c,p,false);
@@ -156,7 +164,7 @@ public class Bookstore {
     static Object monthly(Connection c,Map<String,List<String>> p) throws Exception {
         int year=integer(val(p,"year",String.valueOf(LocalDate.now().getYear())),1900,9998);
         String branch=val(p,"branch","");
-        String sql="SELECT EXTRACT(MONTH FROM h.NgayBan) AS \"month\",COUNT(DISTINCT h.MaHDB) AS invoices,SUM(d.SoLuongBan) AS quantity,SUM(d.SoLuongBan*d.DonGiaBanThucTe) AS revenue FROM HOA_DON_BAN h JOIN CT_HOA_DON_BAN d ON d.MaHDB=h.MaHDB WHERE h.TrangThai='Hoàn tất' AND h.NgayBan>=? AND h.NgayBan<? AND (?='' OR h.MaCN=?) GROUP BY EXTRACT(MONTH FROM h.NgayBan) ORDER BY EXTRACT(MONTH FROM h.NgayBan)";
+        String sql="SELECT EXTRACT(MONTH FROM h.NgayBan) AS `month`,COUNT(DISTINCT h.MaHDB) AS invoices,SUM(d.SoLuongBan) AS quantity,SUM(d.SoLuongBan*d.DonGiaBanThucTe) AS revenue FROM HOA_DON_BAN h JOIN CT_HOA_DON_BAN d ON d.MaHDB=h.MaHDB WHERE h.TrangThai='Hoàn tất' AND h.NgayBan>=? AND h.NgayBan<? AND (?='' OR h.MaCN=?) GROUP BY EXTRACT(MONTH FROM h.NgayBan) ORDER BY EXTRACT(MONTH FROM h.NgayBan)";
         List<Object> args=List.of(LocalDate.of(year,1,1).atStartOfDay(),LocalDate.of(year+1,1,1).atStartOfDay(),branch,branch);
         List<Map<String,Object>> data=query(c,sql,args.toArray()),months=new ArrayList<>();
         for(int m=1;m<=12;m++) {
@@ -169,7 +177,7 @@ public class Bookstore {
 
     static List<Map<String,Object>> books(Connection c,Map<String,List<String>> p,boolean search) throws Exception {
         String term="%"+escapeLike(val(p,"q","").toLowerCase(Locale.ROOT))+"%",branch=val(p,"branch","");
-        String sql="SELECT s.MaSach AS code,s.ISBN AS isbn,s.TenSach AS name,s.TacGia AS author,s.NhaXuatBan AS publisher,s.NamXuatBan AS \"year\",s.DonGiaBan AS price,s.TrangThai AS status,s.MaTL AS genrecode,l.TenTheLoai AS genre,";
+        String sql="SELECT s.MaSach AS code,s.ISBN AS isbn,s.TenSach AS name,s.TacGia AS author,s.NhaXuatBan AS publisher,s.NamXuatBan AS `year`,s.DonGiaBan AS price,s.TrangThai AS status,s.MaTL AS genrecode,l.TenTheLoai AS genre,";
         List<Object> args=new ArrayList<>();
         if(search) sql+="c.MaCN AS branchcode,c.TenCN AS branch,COALESCE(t.SoLuongTon,0) AS stock FROM SACH s JOIN THE_LOAI l ON l.MaTL=s.MaTL CROSS JOIN CHI_NHANH c LEFT JOIN TON_KHO t ON t.MaCN=c.MaCN AND t.MaSach=s.MaSach WHERE (?='' OR c.MaCN=?)";
         else sql+="(SELECT COALESCE(SUM(t.SoLuongTon),0) FROM TON_KHO t WHERE t.MaSach=s.MaSach AND (?='' OR t.MaCN=?)) AS stock FROM SACH s JOIN THE_LOAI l ON l.MaTL=s.MaTL WHERE s.DaXoa=FALSE";
@@ -354,7 +362,7 @@ public class Bookstore {
     }
 
     static void stock(Connection c,String branch,String book,int delta) throws Exception {
-        update(c,"INSERT INTO TON_KHO(MaCN,MaSach,SoLuongTon) SELECT ?,?,0 WHERE NOT EXISTS (SELECT 1 FROM TON_KHO WHERE MaCN=? AND MaSach=?)",branch,book,branch,book);
+        update(c,"INSERT INTO TON_KHO(MaCN,MaSach,SoLuongTon) VALUES(?,?,0) ON DUPLICATE KEY UPDATE SoLuongTon=SoLuongTon",branch,book);
         if(update(c,"UPDATE TON_KHO SET SoLuongTon=SoLuongTon+? WHERE MaCN=? AND MaSach=? AND SoLuongTon+?>=0",delta,branch,book,delta)==0) throw new IllegalArgumentException(delta<0?"Không đủ tồn kho của "+book+" tại "+branch+". Toàn bộ thao tác chưa được lưu; không thể xóa phiếu nhập nếu phần tồn còn lại không đủ để hoàn tác.":"Không thể cập nhật tồn kho.");
     }
 
@@ -378,7 +386,7 @@ public class Bookstore {
     }
     static java.time.LocalDateTime timestamp(String value) {java.time.LocalDateTime t;try{t=value.length()==10?date(value).atStartOfDay():java.time.LocalDateTime.parse(value.replace(' ','T'));}catch(Exception ex){throw new IllegalArgumentException("Ngày giờ không hợp lệ.");}pastDate(t.toLocalDate().toString());return t;}
 
-    static final String REVENUE_SQL="WITH DT AS (SELECT h.MaCN,COUNT(DISTINCT h.MaHDB) AS SoHD,SUM(d.SoLuongBan) AS SLBan,SUM(d.SoLuongBan*d.DonGiaBanThucTe) AS DoanhThu FROM HOA_DON_BAN h JOIN CT_HOA_DON_BAN d ON d.MaHDB=h.MaHDB WHERE h.TrangThai='Hoàn tất' AND h.NgayBan>=? AND h.NgayBan<? GROUP BY h.MaCN), CP AS (SELECT p.MaCN,COUNT(DISTINCT p.MaPN) AS SoPN,SUM(d.SoLuongNhap) AS SLNhap,SUM(d.SoLuongNhap*d.DonGiaNhap) AS ChiPhi FROM PHIEU_NHAP p JOIN CT_PHIEU_NHAP d ON d.MaPN=p.MaPN WHERE p.TrangThai='Đã xác nhận' AND p.NgayNhap>=? AND p.NgayNhap<? GROUP BY p.MaCN) SELECT c.MaCN AS \"Mã CN\",c.TenCN AS \"Chi nhánh\",COALESCE(DT.SoHD,0) AS \"Hóa đơn hoàn tất\",COALESCE(DT.SLBan,0) AS \"Số sách bán\",COALESCE(DT.DoanhThu,0) AS \"Doanh thu (đ)\",COALESCE(CP.SoPN,0) AS \"Phiếu đã xác nhận\",COALESCE(CP.SLNhap,0) AS \"Số sách nhập\",COALESCE(CP.ChiPhi,0) AS \"Chi phí nhập (đ)\" FROM CHI_NHANH c LEFT JOIN DT ON DT.MaCN=c.MaCN LEFT JOIN CP ON CP.MaCN=c.MaCN WHERE (?='' OR c.MaCN=?) ORDER BY COALESCE(DT.DoanhThu,0) DESC,c.MaCN";
+    static final String REVENUE_SQL="WITH DT AS (SELECT h.MaCN,COUNT(DISTINCT h.MaHDB) AS SoHD,SUM(d.SoLuongBan) AS SLBan,SUM(d.SoLuongBan*d.DonGiaBanThucTe) AS DoanhThu FROM HOA_DON_BAN h JOIN CT_HOA_DON_BAN d ON d.MaHDB=h.MaHDB WHERE h.TrangThai='Hoàn tất' AND h.NgayBan>=? AND h.NgayBan<? GROUP BY h.MaCN), CP AS (SELECT p.MaCN,COUNT(DISTINCT p.MaPN) AS SoPN,SUM(d.SoLuongNhap) AS SLNhap,SUM(d.SoLuongNhap*d.DonGiaNhap) AS ChiPhi FROM PHIEU_NHAP p JOIN CT_PHIEU_NHAP d ON d.MaPN=p.MaPN WHERE p.TrangThai='Đã xác nhận' AND p.NgayNhap>=? AND p.NgayNhap<? GROUP BY p.MaCN) SELECT c.MaCN AS `Mã CN`,c.TenCN AS `Chi nhánh`,COALESCE(DT.SoHD,0) AS `Hóa đơn hoàn tất`,COALESCE(DT.SLBan,0) AS `Số sách bán`,COALESCE(DT.DoanhThu,0) AS `Doanh thu (đ)`,COALESCE(CP.SoPN,0) AS `Phiếu đã xác nhận`,COALESCE(CP.SLNhap,0) AS `Số sách nhập`,COALESCE(CP.ChiPhi,0) AS `Chi phí nhập (đ)` FROM CHI_NHANH c LEFT JOIN DT ON DT.MaCN=c.MaCN LEFT JOIN CP ON CP.MaCN=c.MaCN WHERE (?='' OR c.MaCN=?) ORDER BY COALESCE(DT.DoanhThu,0) DESC,c.MaCN";
 
     static List<Object> revenueParameters(LocalDate from,LocalDate to,String branch) {
         return List.of(from.atStartOfDay(),to.plusDays(1).atStartOfDay(),from.atStartOfDay(),to.plusDays(1).atStartOfDay(),branch,branch);
@@ -394,9 +402,9 @@ public class Bookstore {
             sections.add(reportSection(c,title,REVENUE_SQL,revenueParameters(from,to,branch)));
         } else if(val(p,"kind","").equals("inventory")) {
             title="Cảnh báo tồn kho và sách bán chạy";
-            String sql="SELECT c.MaCN AS \"Mã CN\",c.TenCN AS \"Chi nhánh\",s.MaSach AS \"Mã sách\",s.ISBN AS \"ISBN\",s.TenSach AS \"Tên sách\",l.TenTheLoai AS \"Thể loại\",t.SoLuongTon AS \"Tồn kho\" FROM TON_KHO t JOIN CHI_NHANH c ON c.MaCN=t.MaCN JOIN SACH s ON s.MaSach=t.MaSach JOIN THE_LOAI l ON l.MaTL=s.MaTL WHERE t.SoLuongTon<=? AND s.TrangThai='Đang kinh doanh' AND (?='' OR c.MaCN=?) ORDER BY t.SoLuongTon,c.MaCN,s.MaSach";
+            String sql="SELECT c.MaCN AS `Mã CN`,c.TenCN AS `Chi nhánh`,s.MaSach AS `Mã sách`,s.ISBN AS `ISBN`,s.TenSach AS `Tên sách`,l.TenTheLoai AS `Thể loại`,t.SoLuongTon AS `Tồn kho` FROM TON_KHO t JOIN CHI_NHANH c ON c.MaCN=t.MaCN JOIN SACH s ON s.MaSach=t.MaSach JOIN THE_LOAI l ON l.MaTL=s.MaTL WHERE t.SoLuongTon<=? AND s.TrangThai='Đang kinh doanh' AND (?='' OR c.MaCN=?) ORDER BY t.SoLuongTon,c.MaCN,s.MaSach";
             sections.add(reportSection(c,"Sách sắp hết theo chi nhánh",sql,List.of(integer(val(p,"threshold","5"),0,1000000),branch,branch)));
-            sql="WITH T AS (SELECT s.MaSach,s.ISBN,s.TenSach,l.TenTheLoai,SUM(d.SoLuongBan) AS Tong,SUM(d.SoLuongBan*d.DonGiaBanThucTe) AS Tien FROM SACH s JOIN THE_LOAI l ON l.MaTL=s.MaTL JOIN CT_HOA_DON_BAN d ON d.MaSach=s.MaSach JOIN HOA_DON_BAN h ON h.MaHDB=d.MaHDB WHERE h.TrangThai='Hoàn tất' AND h.NgayBan>=? AND h.NgayBan<? AND (?='' OR h.MaCN=?) GROUP BY s.MaSach,s.ISBN,s.TenSach,l.TenTheLoai) SELECT MaSach AS \"Mã sách\",ISBN AS \"ISBN\",TenSach AS \"Tên sách\",TenTheLoai AS \"Thể loại\",Tong AS \"Số lượng bán\",Tien AS \"Doanh thu (đ)\" FROM T WHERE Tong>=(SELECT AVG(CAST(Tong AS DECIMAL(18,2))) FROM T) ORDER BY Tong DESC,Tien DESC,MaSach";
+            sql="WITH T AS (SELECT s.MaSach,s.ISBN,s.TenSach,l.TenTheLoai,SUM(d.SoLuongBan) AS Tong,SUM(d.SoLuongBan*d.DonGiaBanThucTe) AS Tien FROM SACH s JOIN THE_LOAI l ON l.MaTL=s.MaTL JOIN CT_HOA_DON_BAN d ON d.MaSach=s.MaSach JOIN HOA_DON_BAN h ON h.MaHDB=d.MaHDB WHERE h.TrangThai='Hoàn tất' AND h.NgayBan>=? AND h.NgayBan<? AND (?='' OR h.MaCN=?) GROUP BY s.MaSach,s.ISBN,s.TenSach,l.TenTheLoai) SELECT MaSach AS `Mã sách`,ISBN AS `ISBN`,TenSach AS `Tên sách`,TenTheLoai AS `Thể loại`,Tong AS `Số lượng bán`,Tien AS `Doanh thu (đ)` FROM T WHERE Tong>=(SELECT AVG(CAST(Tong AS DECIMAL(18,2))) FROM T) ORDER BY Tong DESC,Tien DESC,MaSach";
             sections.add(reportSection(c,"Sách bán từ mức trung bình trở lên",sql,List.of(from.atStartOfDay(),to.plusDays(1).atStartOfDay(),branch,branch)));
         } else throw new IllegalArgumentException("Loại báo cáo không hợp lệ.");
         return Map.of("title",title,"sections",sections);
@@ -438,9 +446,20 @@ public class Bookstore {
         if(o instanceof Iterable<?> list) {List<String> a=new ArrayList<>();for(Object v:list)a.add(json(v));return "["+String.join(",",a)+"]";}
         StringBuilder b=new StringBuilder("\"");for(char ch:o.toString().toCharArray()) {switch(ch){case '"'->b.append("\\\"");case '\\'->b.append("\\\\");case '\n'->b.append("\\n");case '\r'->b.append("\\r");case '\t'->b.append("\\t");default->{if(ch<32)b.append(String.format("\\u%04x",(int)ch));else b.append(ch);}}}return b.append('"').toString();
     }
-    static void seed(Connection c) throws Exception {
+    private static void runSql(Connection c, String file) throws IOException, SQLException {
+        try (Statement statement = c.createStatement()) {
+            statement.execute(Files.readString(ROOT.resolve("sql").resolve(file)));
+        }
+    }
+
+    private static void seed(Connection c) throws IOException, SQLException {
         c.setAutoCommit(false);
-        try(Reader r=Files.newBufferedReader(ROOT.resolve("sql/data.sql"))) {RunScript.execute(c,r);c.commit();}
-        catch(Exception e){c.rollback();throw e;}finally{c.setAutoCommit(true);}
+        try {
+            runSql(c, "data.sql");
+            c.commit();
+        } catch (IOException | SQLException ex) {
+            c.rollback();
+            throw ex;
+        }
     }
 }

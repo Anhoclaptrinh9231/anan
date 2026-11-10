@@ -1,3 +1,9 @@
+> Bổ sung xóa nhân viên: nhân viên đã có chứng từ được đánh dấu NHAN_VIEN.DaXoa và nghỉ việc, không còn hiện trong danh mục / ô chọn. Chứng từ cũ giữ nguyên nhân viên và số tiền. Nhân viên nhập hàng chỉ lập phiếu nhập; muốn lập hóa đơn bán cần đổi chức vụ hoặc dùng quản trị viên.
+
+> Cập nhật bổ sung 30/10: bốn danh mục có nút Xóa (bản ghi đang được tham chiếu sẽ báo lý do); sách có Ngưng kinh doanh / Kinh doanh lại riêng với Xóa. Cờ kỹ thuật SACH.DaXoa giữ chứng từ cũ khi xóa sách, ngưng kinh doanh vẫn hiển thị. Báo cáo có thông báo tải/cập nhật và tự cuộn đến kết quả; số điện thoại bỏ độ dài tối thiểu, tối đa 15 ký tự.
+
+> Cập nhật 30/10: Xóa phiếu nhập gỡ hẳn phiếu và chi tiết sau khi hoàn tác tồn; không hiển thị phiếu đã xóa. Sách đã xóa biến mất khỏi danh mục và tìm kiếm; chứng từ cũ được giữ. Khách hàng có nút Xóa và mã khách được sửa với ON UPDATE CASCADE, ON DELETE SET NULL trên hóa đơn. Danh mục sách có lọc thể loại và sắp xếp giá / tồn kho tăng giảm. Các mô tả khôi phục phiếu bên dưới thuộc bản trước.
+
 # Bản cập nhật theo mô tả và ERD của nhóm — 29/10/2026
 
 Nguồn chính: [mô tả ERD-DATA DIAGRAM](https://docs.google.com/document/d/1Nl8SI_FzWJgpHifEfb6gIRrG0407_QkaPEBrJ6d0wAg/edit) và [lược đồ nhóm](https://app.diagrams.net/#G14YQBJLRh5wd0LLUGNSIdfBej51VhAP_g).
@@ -6,12 +12,14 @@ Nguồn chính: [mô tả ERD-DATA DIAGRAM](https://docs.google.com/document/d/1
 
 11 bảng: CHI_NHANH, NHAN_VIEN, KHACH_HANG, THE_LOAI, SACH, NHA_CUNG_CAP, PHIEU_NHAP, CT_PHIEU_NHAP, HOA_DON_BAN, CT_HOA_DON_BAN, TON_KHO.
 
+Sơ đồ được sinh từ cấu trúc bảng và khóa ngoại trong cơ sở dữ liệu. [Data Diagram MySQL](../web/data-diagram.svg)
+
 - CHI_NHANH là cửa hàng của hiệu sách; nhà cung cấp là một danh mục độc lập.
 - TON_KHO có khóa ghép (MaCN, MaSach), không gộp tồn kho của các cửa hàng khi bán.
 - Mỗi sách thuộc một thể loại. ISBN duy nhất nếu được cung cấp; giá không âm.
 - Nhân viên có chi nhánh, chức vụ và trạng thái. Nhân viên thường chỉ lập đúng nghiệp vụ tại chi nhánh của mình. Quản trị viên có thể lập tại các chi nhánh, phù hợp phiếu mẫu PN20261002.
 - Khách mua lẻ không cần hồ sơ: MaKH của hóa đơn là NULL.
-- Ngày giờ bắt buộc trên hóa đơn bán và phiếu nhập, được lưu kiểu TIMESTAMP. Ngày trong biểu đồ và báo cáo lấy từ ngày giờ chứng từ, không lấy thời điểm mở trang.
+- Ngày giờ bắt buộc trên hóa đơn bán và phiếu nhập, lưu bằng kiểu DATETIME(6) trong MySQL theo giờ Việt Nam. Biểu đồ và báo cáo dùng ngày giờ chứng từ.
 - Giá bán thực tế và giá nhập được lưu trong từng dòng chi tiết. Tổng tiền được tính khi truy vấn; không lưu cột tổng tiền dư thừa.
 
 ## Các màn hình
@@ -39,10 +47,10 @@ Cả hai báo cáo có CSV, in/lưu PDF bằng trình duyệt và SQL tương �
 
 - Quy tắc nghiệp vụ nói ISBN có thể không cung cấp, trong khi DDL mẫu ghi NOT NULL. Bản chạy dùng NULL + UNIQUE theo quy tắc nghiệp vụ.
 - Phần thực thể và ERD có NgaySinh khách hàng, nhưng danh sách quan hệ và DDL bỏ sót. Bản chạy bổ sung NgaySinh tùy chọn.
-- Mô tả dùng SQL Server (`GO`, `NVARCHAR`, `GETDATE`, `ISNULL`). Bản chạy công khai dùng PostgreSQL, bản chạy tại máy dùng H2; thay bằng UTF-8 VARCHAR, CURRENT_TIMESTAMP, COALESCE và TIMESTAMP. Tên bảng, quan hệ và nghiệp vụ giữ theo lược đồ mới.
+- Tài liệu nhóm có ví dụ cú pháp SQL Server. Website dùng MySQL 8.4 LTS với VARCHAR mã hóa utf8mb4, CURRENT_TIMESTAMP, COALESCE và DATETIME. Tên bảng, quan hệ và nghiệp vụ theo lược đồ nhóm.
 
 ## Dữ liệu và kiểm tra
 
-Bản mới dùng schema bookstore_v2 và dữ liệu mẫu của mô tả: 2 chi nhánh, 4 sách, 2 phiếu nhập, 3 hóa đơn. Thông tin liên hệ được thay bằng dữ liệu minh họa. Dữ liệu của bản 20 bảng vẫn được giữ trong schema cũ, không nhập lẫn vào mô hình mới.
+Web dùng cơ sở dữ liệu MySQL bookstore_v2. Lần đầu trên cơ sở dữ liệu trống sẽ nạp 2 chi nhánh, 4 sách, 2 phiếu nhập và 3 hóa đơn mẫu. Dữ liệu của mô hình 20 bảng được lưu trong bản sao cơ sở dữ liệu trước đây.
 
-KIEM-TRA.bat chạy ModelTest trên CSDL H2 tách biệt. Đã kiểm tra nghiệp vụ với H2 và PostgreSQL: tồn kho từng chi nhánh, hóa đơn khách lẻ, giá lịch sử, xóa/khôi phục phiếu, rollback khi thiếu tồn, tìm kiếm tiếng Việt, tổng tiền báo cáo và thống kê tháng. Bản kiểm tra giao diện dùng CSDL cục bộ; không xóa phiếu có sẵn trên web công khai.
+KIEM-TRA.bat chạy các kiểm tra trên một cơ sở dữ liệu MySQL riêng. Các kiểm tra bao gồm tồn kho theo chi nhánh, hóa đơn khách lẻ, giá lịch sử, xóa phiếu, rollback khi thiếu tồn, tìm kiếm tiếng Việt, báo cáo và thống kê tháng.

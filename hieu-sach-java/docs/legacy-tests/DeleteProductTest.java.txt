@@ -1,0 +1,25 @@
+import java.nio.file.*;
+import java.sql.*;
+import java.io.*;
+import java.util.*;
+import org.h2.tools.RunScript;
+
+class DeleteProductTest {
+    static Map<String,List<String>> f(String...a){Map<String,List<String>> p=new HashMap<>();for(int i=0;i<a.length;i+=2)p.put(a[i],List.of(a[i+1]));return p;}
+    static long count(String table,String col,String code)throws Exception{try(Connection c=Bookstore.db()){return ((Number)Bookstore.query(c,"SELECT COUNT(*) AS n FROM "+table+" WHERE "+col+"=?",code).get(0).get("n")).longValue();}}
+    static void check(boolean ok,String text){if(!ok)throw new AssertionError(text);System.out.println("PASS "+text);}
+    public static void main(String[]a)throws Exception{
+        System.setProperty("bookstore.data","test-output/delete-"+UUID.randomUUID()+"/db");
+        Files.createDirectories(Bookstore.ROOT.resolve(System.getProperty("bookstore.data")).getParent());
+        try(Connection c=Bookstore.db();Reader r=Files.newBufferedReader(Path.of("sql/schema.sql"))){RunScript.execute(c,r);Bookstore.seed(c);}
+        Bookstore.post("/api/products",f("code","DEL_BOOK","name","Delete test","price","1000","stock","1","type","SACH","author","Test","genre","Test","edition","Lần 1,Lần 2"));
+        Bookstore.post("/api/products/delete",f("code","DEL_BOOK"));
+        check(count("HANGHOA","MaHH","DEL_BOOK")==0&&count("SACH","MaHHS","DEL_BOOK")==0&&count("SACH_TB","MaHHS","DEL_BOOK")==0,"delete unused book and its subtype / editions");
+        Bookstore.post("/api/products",f("code","DEL_PEN","name","Delete test","price","1000","stock","1","type","DUNGCU","category","Bút"));
+        Bookstore.post("/api/products/delete",f("code","DEL_PEN"));
+        check(count("HANGHOA","MaHH","DEL_PEN")==0&&count("DUNGCU","MaHHD","DEL_PEN")==0,"delete unused stationery and its subtype");
+        try{Bookstore.post("/api/products/delete",f("code","HS001"));throw new AssertionError("used item deleted");}catch(IllegalArgumentException expected){check(count("HANGHOA","MaHH","HS001")==1&&count("SACH","MaHHS","HS001")==1,"reject used item and preserve related data");}
+        try{Bookstore.post("/api/products/delete",f("code","MISSING"));throw new AssertionError("missing item accepted");}catch(IllegalArgumentException expected){check(true,"reject missing item");}
+        try(Connection c=Bookstore.db()){Bookstore.update(c,"SHUTDOWN");}
+    }
+}

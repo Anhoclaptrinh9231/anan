@@ -44,7 +44,7 @@ Giới hạn tham gia: một hóa đơn đã lưu qua ứng dụng có từ 1 đ
 
 ## 3. Chuyển sang lược đồ quan hệ / Data Diagram
 
-PK là khóa chính; FK là khóa ngoại. Danh sách dưới đây thống nhất với `sql/schema.sql`. Data Diagram đầy đủ xem `web/data-diagram.svg`, nguồn `docs/data-diagram.dot`.
+PK là khóa chính. FK là khóa ngoại. Danh sách dưới đây thuộc lược đồ 20 bảng của phiên bản lưu trữ.
 
 | # | Quan hệ và thuộc tính | PK | FK |
 |---|---|---|---|

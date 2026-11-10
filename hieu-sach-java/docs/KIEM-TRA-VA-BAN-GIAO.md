@@ -5,7 +5,7 @@
 ## Đã kiểm tra
 
 - Biên dịch bằng JDK 21; kiểm tra cú pháp JavaScript.
-- 40 kiểm tra nghiệp vụ bằng `tests/IntegrationTest.java` trên file CSDL thử riêng: đúng 20 bảng, nạp mẫu, hai form, khóa ngoại / khóa chính, dữ liệu không hợp lệ, rollback nhiều dòng, giá lịch sử, nhập tăng / bán giảm kho, tìm kiếm tiếng Việt, tham số SQL, đồng hạng, khoảng ngày rỗng, hai yêu cầu mua món cuối đồng thời, đóng và mở lại CSDL.
+- 40 kiểm tra nghiệp vụ bằng `legacy-tests/IntegrationTest.java.txt` trên file CSDL thử riêng: đúng 20 bảng, nạp mẫu, hai form, khóa ngoại / khóa chính, dữ liệu không hợp lệ, rollback nhiều dòng, giá lịch sử, nhập tăng / bán giảm kho, tìm kiếm tiếng Việt, tham số SQL, đồng hạng, khoảng ngày rỗng, hai yêu cầu mua món cuối đồng thời, đóng và mở lại CSDL.
 - Chạy được cả 7 câu SQL chuyển từ ảnh trong `sql/tham-khao-7-cau.sql` trên H2, bao gồm câu có thể trả kết quả rỗng với dữ liệu mới.
 - Thao tác trực tiếp trên giao diện ở CSDL thử riêng: thêm sách, thêm khách có hai điện thoại, tìm sách vừa thêm, lập hóa đơn hai mặt hàng (112.000đ), lập phiếu nhập có nhà cung cấp / chi nhánh.
 - Bấm Xuất CSV trong trình duyệt và đọc file thực tế: 7 dòng báo cáo doanh thu, tiêu đề UTF-8 tiếng Việt, tổng khớp 2.007.060đ ở CSDL thử sau giao dịch kiểm tra. Dữ liệu bàn giao ban đầu có tổng 1.895.060đ.
