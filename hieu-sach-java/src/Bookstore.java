@@ -65,7 +65,11 @@ public class Bookstore {
             }
             runSql(c, "schema.sql");
             if (query(c, "SELECT 1 FROM CHI_NHANH UNION ALL SELECT 1 FROM THE_LOAI UNION ALL SELECT 1 FROM KHACH_HANG UNION ALL SELECT 1 FROM NHA_CUNG_CAP LIMIT 1").isEmpty()) {
-                seed(c);
+                if (PUBLIC_DEMO && "true".equals(System.getenv("BOOKSTORE_MIGRATE_POSTGRES"))) {
+                    RenderDataTransfer.copy(c, System.getenv("DATABASE_URL"));
+                } else {
+                    seed(c);
+                }
             }
         }
     }
